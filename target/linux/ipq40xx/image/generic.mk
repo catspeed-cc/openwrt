@@ -1408,3 +1408,35 @@ define Device/zyxel_wre6606
 endef
 # Missing DSA Setup
 #TARGET_DEVICES += zyxel_wre6606
+
+#define Device/trendnet_tew-829dru-test
+#  $(call Device/FitImage)
+#  $(call Device/UbiFit)
+#  DEVICE_VENDOR := TRENDnet
+#  DEVICE_MODEL := TEW-829DRU-TEST
+#  DEVICE_DTS := qcom-ipq4019-tew-829dru-test
+#  DEVICE_DTS_DIR := ../dts
+#  DEVICE_DTS_CONFIG := config@1
+#  KERNEL_INSTALL := 1
+#  BLOCKSIZE := 128k
+#  PAGESIZE := 2048
+#  FILESYSTEMS := squashfs
+#  IMAGE_SIZE := 112640k
+#endef
+#TARGET_DEVICES += trendnet_tew-829dru-test
+
+define Device/trendnet_tew-829dru
+  $(call Device/FitImage)
+  $(call Device/UbiFit)
+  DEVICE_VENDOR := TRENDnet
+  DEVICE_MODEL := TEW-829DRU
+  DEVICE_DTS := qcom-ipq4019-tew-829dru
+  DEVICE_DTS_DIR := ../dts
+  DEVICE_DTS_CONFIG := config@1
+  KERNEL_INSTALL := 1
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  FILESYSTEMS := squashfs
+  IMAGE_SIZE := 112640k
+endef
+TARGET_DEVICES += trendnet_tew-829dru
