@@ -1,0 +1,258 @@
+// SPDX-License-Identifier: GPL-2.0
+// Copyright (c) 2018, The Linux Foundation. All rights reserved.
+// Copyright (c) 2026, Your Name <your@email.com>
+
+/*
+ *		What is working?
+ *
+ *			- CPU
+			- RAM
+			- 8MB Flash (bootloader)
+ *			- USB
+ *
+ *		What is NOT working?
+ *
+ *			- 128MB nand (2x kernel, 2x rootfs, 1x rootfs_data)
+ *			- switches (QCA8075, QCA8335)
+ *			- wifi (QCA9984, * wifi I did get working, I just have to copy the DTS code + board.bin binaries back)
+ *
+ *	WARNING: ENSURE BOARD.BIN AND CALDATA IS NOT COMMITTED TO GIT REPOSITORY (INTELLECTUAL PROPERTY CONCERNS)
+ *
+ */
+
+#include "qcom-ipq4019-ap.dk04.1.dtsi"
+
+/*
+ * REQUIRED: The following is required as recent mainline versions of OpenWRT
+ *			 now define these with settings that are incorrect for our router
+ *
+ * The conflict is with reserved/in-use memory & the "qcom,nand@7980000" node
+ *
+ */
+/delete-node/ &nand;
+/* /delete-node/ &qpic_bam; */
+
+/ {
+
+	model = "TRENDnet TEW-829DRU";
+	compatible = "trendnet,tew-829dru", "qcom,ipq4019-dk04.1-c1", "qcom,ipq4019";
+	
+	/* temporary, delete the inherited reserved memory node */
+	/delete-node/ reserved-memory;
+	
+	chosen {
+		/* For Mainline/OpenWrt 21.02+ kernels: */
+		bootargs = "console=ttyHSL0,115200n8 rootfstype=squashfs,jffs2";
+	};
+	
+	&qpic_bam {
+		status = "okay";
+	};
+	
+	soc {
+		
+		qcom,nand@7980000 {
+			
+			compatible = "qcom,msm-nand";
+			status = "okay";
+			
+			reg = <0x07980000 0x40000>, <0x07984000 0x1a000>;
+			reg-names = "nand_phys", "bam_phys";
+			
+			interrupts = <0 101 0>;
+			interrupt-names = "bam_irq";
+			
+			clock-names = "iface_clk", "core_clk";
+			clocks = <&gcc GCC_QPIC_AHB_CLK>, <&gcc GCC_QPIC_CLK>;
+			
+			/* KEEP dmas property - it references &qpic_bam */
+			dmas = <&qpic_bam 0>, <&qpic_bam 1>, <&qpic_bam 2>;
+			dma-names = "tx", "rx", "cmd";
+			
+			pinctrl-0 = <&nand_pins>;
+			pinctrl-names = "default";
+			
+			nand@0 {
+				compatible = "qcom,nandcs";
+				reg = <0>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+				
+				nand-ecc-strength = <4>;
+				nand-ecc-step-size = <512>;
+				nand-bus-width = <8>;
+			
+				partitions {
+				
+					compatible = "fixed-partitions";
+					#address-cells = <1>;
+					#size-cells = <1>;
+					
+					/* 8MB BOOTLOADER LAYOUT */
+					partition@0 { label = "0:SBL1"; reg = <0x0 0x40000>; read-only; };
+					partition@40000 { label = "0:MIBIB"; reg = <0x40000 0x20000>; read-only; };
+					partition@60000 { label = "0:QSEE"; reg = <0x60000 0x60000>; read-only; };
+					partition@c0000 { label = "0:CDT"; reg = <0xc0000 0x10000>; read-only; };
+					partition@d0000 { label = "0:DDRPARAMS"; reg = <0xd0000 0x10000>; read-only; };
+					partition@e0000 { label = "0:APPSBLENV"; reg = <0xe0000 0x10000>; };
+					partition@f0000 { label = "0:APPSBL"; reg = <0xf0000 0x80000>; read-only; };
+					partition@170000 { label = "0:ART"; reg = <0x170000 0x10000>; read-only; };
+					
+					/* 128MB NAND LAYOUT */
+					/* Critical: Physical offsets calculated from sequential layout */
+					partition@180000 { label = "rootfs"; reg = <0x180000 0x3000000>; };
+					partition@3180000 { label = "rootfs_1"; reg = <0x3180000 0x3000000>; };
+					partition@6180000 { label = "overlay"; reg = <0x6180000 0x2000000>; };
+				
+				};
+				/*end of partition block */
+			};
+			/* end of nand@0 block */
+		};
+		/* end of &nand block */
+
+	};
+	/* end of soc block */
+
+};
+/* end of root block */
+
+
+
+&usb3 {
+	status = "okay";
+	dr_mode = "host";
+	phys = <&usb3_hs_phy>, <&usb3_ss_phy>;
+	phy-names = "usb2-phy", "usb3-phy";
+	/* vbus-supply removed because GPIO 48 hog handles power enable */
+};   
+
+&usb3_hs_phy {
+	status = "okay";
+};
+
+&usb3_ss_phy {
+	status = "okay";
+};
+
+&usb2 {
+	status = "okay";
+};
+
+&usb2_hs_phy {
+	status = "okay";
+};
+
+&blsp1_uart1 {
+	status = "okay";
+	pinctrl-0 = <&tew_uart0_pins>;
+	pinctrl-names = "default";
+};
+
+&blsp1_uart2 {
+	status = "okay";
+	pinctrl-0 = <&tew_uart1_pins>;
+	pinctrl-names = "default";
+};   
+
+&tlmm {
+
+	/* Add this GPIO Hog for USB Power */
+	usb_power_en: usb-power-en {
+		gpio-hog;
+		gpios = <48 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "usb-power-enable";
+	};
+
+	/* pinmux / gpios */
+	
+	/* Using Stock Router Pinout for UART0 (Console) */
+	tew_uart0_pins: uart0-state {
+		pins = "gpio16", "gpio17"; 
+		function = "blsp_uart0";
+		bias-disable;
+	};
+
+	/* Using Stock Router Pinout for UART1 (2 pins, not 4) */
+	tew_uart1_pins: uart1-state {
+		pins = "gpio8", "gpio9"; 
+		function = "blsp_uart1";
+		bias-disable;
+	};
+
+	led0_pinmux {
+		linux,phandle = <0x52>;
+		phandle = <0x52>;
+
+		mux_1 {
+			pins = "gpio36";
+			function = "led0";
+			bias-pull-down;
+		};
+
+		mux_2 {
+			pins = "gpio40";
+			function = "led4";
+			bias-pull-down;
+		};
+	};
+
+	uart1_pinmux {
+		linux,phandle = <0x56>;
+		phandle = <0x56>;
+
+		mux {
+			pins = "gpio8\0gpio9\0gpio10\0gpio11";
+			function = "blsp_uart1";
+			bias-disable;
+		};
+	};
+
+	spi_0_pinmux {
+		linux,phandle = <0x4a>;
+		phandle = <0x4a>;
+
+		mux {
+			pins = "gpio12\0gpio13\0gpio14\0gpio15";
+			function = "blsp_spi0";
+			bias-disable;
+		};
+	};
+
+	i2c_0_pinmux {
+		linux,phandle = <0x4f>;
+		phandle = <0x4f>;
+
+		mux {
+			pins = "gpio20\0gpio21";
+			function = "blsp_i2c0";
+			bias-disable;
+		};
+	};
+
+	ts_0_pinmux {
+
+		mux_1 {
+			pins = "gpio34";
+			output-high;
+		};
+
+		mux_2 {
+			pins = "gpio35";
+			input-enable;
+			bias-pull-up;
+		};
+	};
+	/* end of pinmux/gpios */
+	
+};   
+
+/* CHANGE 5: Add Switch Configuration if not present in the .dtsi */
+/* The AP-DK04.1.dtsi might not have the specific QCA8337 setup for the TEW-829DRU */
+/* If the SDK .dtsi already has the switch defined correctly, you can skip this. */
+/* If not, append the &gmac1 and &mdio blocks here (from previous steps). */
+
+
+/* CHANGE 6: Add wifi from existing/old DTS config attempts, and copy board*.bin (CALDATA) files */
+
