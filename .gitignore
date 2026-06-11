@@ -44,6 +44,7 @@ git-src
 *.itb
 *.ubi
 *.bin.md5
+*.dts.md5
 *.tar.gz
 fw_tew-829dru_v1(1.0.3.12).zip
 *-squashfs-*.bin
@@ -67,3 +68,6 @@ part*.bin
 TEW-829DRU*.bin
 extracted.dtb
 *flashdump.bin
+
+# secret(s)
+*_PAC*

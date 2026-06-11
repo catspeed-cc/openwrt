@@ -1431,7 +1431,7 @@ define Device/trendnet_tew-829dru
   DEVICE_VENDOR := TRENDnet
   DEVICE_MODEL := TEW-829DRU
   DEVICE_DTS := qcom-ipq4019-tew-829dru
-  DEVICE_DTS_DIR := ../dts
+  #DEVICE_DTS_DIR := ../dts
   DEVICE_DTS_CONFIG := config@1
   KERNEL_INSTALL := 1
   BLOCKSIZE := 128k
