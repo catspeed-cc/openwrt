@@ -35,3 +35,35 @@ git-src
 .cproject
 .ccache
 .vscode*
+
+# mooleshacat
+
+# nusciance
+*.apk
+*.img
+*.itb
+*.ubi
+*.bin.md5
+*.tar.gz
+fw_tew-829dru_v1(1.0.3.12).zip
+*-squashfs-*.bin
+
+# proprietary
+board.bin
+board-2.bin
+caldata.bin
+firmware-5.bin
+full_nand_*.bin
+boardData_1_0_IPQ4019_DK04_2G.bin
+boardData_1_0_IPQ4019_DK04_5G.bin
+boardData_QCA9984_CUS239_5G_v1_001.bin
+extracted.bin
+kernel-uImage.bin
+TEW-829DRU_v1.0.3.12.bin
+pre-cal-ahb-a000000.wifi.bin
+pre-cal-ahb-a800000.wifi.bin
+chunk_*.bin
+part*.bin
+TEW-829DRU*.bin
+extracted.dtb
+*flashdump.bin
