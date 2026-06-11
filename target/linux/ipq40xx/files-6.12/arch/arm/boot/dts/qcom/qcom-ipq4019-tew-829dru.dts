@@ -7,15 +7,15 @@
  *
  *			- CPU
 			- RAM
-			- 8MB Flash (dual u-boot bootloader, caldata)
+			- 8MB Flash (Macronix MX25L6433F SPI NOR 8MB // dual bootloader, ART, etc.)
  *			- UART
  *			- USB
  *
  *		What is NOT working?
  *
- *			- 128MB nand (2x kernel, 2x rootfs, 1x rootfs_data)
+ *			- 128MB nand (Micron MT29F1G08ABADA NAND 128MB // 2x kernel, 2x rootfs, 1x rootfs_data)
  *			- switches (QCA8075, QCA8335)
- *			- wifi (QCA9984, * wifi I did get working, I just have to copy the DTS code + board.bin binaries back)
+ *			- wifi (QCA9984, * wifi I did get working, I just have to copy the DTS code + board.bin binary back)
  *
  *	WARNING: ENSURE BOARD.BIN AND CALDATA IS NOT COMMITTED TO GIT REPOSITORY (INTELLECTUAL PROPERTY CONCERNS)
  *
@@ -39,6 +39,90 @@
 };
 /* end of root block */
 
+
+
+
+&blsp1_spi1 {
+
+	/* 8MB FLASH CHIP (Macronix MX25L6433F SPI NOR 8MB) */
+	status = "okay";
+	
+	pinctrl-0 = <&spi_0_pinmux>;
+	pinctrl-names = "default";
+	
+	cs-gpios = <&tlmm 12 GPIO_ACTIVE_HIGH>;
+
+	flash: flash@0 {
+		
+		#address-cells = <1>;
+        #size-cells = <1>;
+		
+		compatible = "micron,n25q128a11", "jedec,spi-nor";
+		
+		reg = <0>;
+		spi-max-frequency = <24000000>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "SBL1";
+				reg = <0x0 0x40000>;
+				read-only;
+			};
+
+			partition@40000 {
+				label = "MIBIB";
+				reg = <0x40000 0x80000>;
+				read-only;
+			};
+
+			partition@c0000 {
+				label = "QSEE";
+				reg = <0xc0000 0x80000>;
+				read-only;
+			};
+
+			partition@140000 {
+				label = "CDT";
+				reg = <0x140000 0x80000>;
+				read-only;
+			};
+
+			partition@1c0000 {
+				label = "DDRPARAMS";
+				reg = <0x1c0000 0x10000>;
+				read-only;
+			};
+
+			partition@1d0000 {
+				label = "APPSBL";
+				reg = <0x1d0000 0x80000>;
+				read-only;
+			};
+
+			partition@250000 {
+				label = "APPSBLENV";
+				reg = <0x250000 0x10000>;
+			};
+
+			art: partition@260000 {
+				label = "ART";
+				reg = <0x260000 0x30000>;
+				read-only;
+			};
+
+			partition@290000 {
+				label = "HLOS";
+				reg = <0x290000 0x100000>;
+				read-only;
+			};
+		};
+	};
+};
+/* end of &blsp1_spi1 (Macronix MX25L6433F SPI NOR 8MB) */
 
 
 
@@ -83,7 +167,7 @@
 		bias-disable;
 	};
 
-	led0_pinmux {
+	led0_pins: led0_pinmux {
 		linux,phandle = <0x52>;
 		phandle = <0x52>;
 
@@ -100,7 +184,7 @@
 		};
 	};
 
-	uart1_pinmux {
+	uart1_pins: uart1_pinmux {
 		linux,phandle = <0x56>;
 		phandle = <0x56>;
 
@@ -111,7 +195,7 @@
 		};
 	};
 
-	spi_0_pinmux {
+	spi_0_pinmux: spi_0_pinmux {
 		linux,phandle = <0x4a>;
 		phandle = <0x4a>;
 
@@ -122,7 +206,7 @@
 		};
 	};
 
-	i2c_0_pinmux {
+	i2c_0_pinmux: i2c_0_pinmux {
 		linux,phandle = <0x4f>;
 		phandle = <0x4f>;
 
@@ -133,7 +217,7 @@
 		};
 	};
 
-	ts_0_pinmux {
+	ts_0_pinmux: ts_0_pinmux {
 
 		mux_1 {
 			pins = "gpio34";
@@ -205,9 +289,10 @@
 
 
 
-//TODO:
+// TODO:
 
-/* CHANGE 1: ADD NAND - fucking nand is impossible, memory address conflicts with qcom-ipq4019.dtsi
+/* CHANGE 1: ADD NAND - fucking nand is impossible, memory address conflicts with qcom-ipq4019.dtsi */
+/*           DO NOT MIX SPI/NAND PARTITIONS! */
 
 /* CHANGE 2: Add Switch Configuration if not present in the .dtsi */
 /* The AP-DK04.1.dtsi might not have the specific QCA8337 setup for the TEW-829DRU */
