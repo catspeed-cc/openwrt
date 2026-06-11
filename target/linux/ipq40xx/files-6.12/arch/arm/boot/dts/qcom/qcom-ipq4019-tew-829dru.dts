@@ -7,7 +7,8 @@
  *
  *			- CPU
 			- RAM
-			- 8MB Flash (bootloader)
+			- 8MB Flash (dual u-boot bootloader, caldata)
+ *			- UART
  *			- USB
  *
  *		What is NOT working?
@@ -22,16 +23,6 @@
 
 #include "qcom-ipq4019-ap.dk04.1.dtsi"
 
-/*
- * REQUIRED: The following is required as recent mainline versions of OpenWRT
- *			 now define these with settings that are incorrect for our router
- *
- * The conflict is with reserved/in-use memory & the "qcom,nand@7980000" node
- *
- */
-/delete-node/ &nand;
-/* /delete-node/ &qpic_bam; */
-
 / {
 
 	model = "TRENDnet TEW-829DRU";
@@ -42,106 +33,14 @@
 	
 	chosen {
 		/* For Mainline/OpenWrt 21.02+ kernels: */
-		bootargs = "console=ttyHSL0,115200n8 rootfstype=squashfs,jffs2";
+		bootargs = "console=ttyHSL0,115200n8 rootfstype=squashfs,jffs2 iommu.passthrough=1";
 	};
 	
-	&qpic_bam {
-		status = "okay";
-	};
-	
-	soc {
-		
-		qcom,nand@7980000 {
-			
-			compatible = "qcom,msm-nand";
-			status = "okay";
-			
-			reg = <0x07980000 0x40000>, <0x07984000 0x1a000>;
-			reg-names = "nand_phys", "bam_phys";
-			
-			interrupts = <0 101 0>;
-			interrupt-names = "bam_irq";
-			
-			clock-names = "iface_clk", "core_clk";
-			clocks = <&gcc GCC_QPIC_AHB_CLK>, <&gcc GCC_QPIC_CLK>;
-			
-			/* KEEP dmas property - it references &qpic_bam */
-			dmas = <&qpic_bam 0>, <&qpic_bam 1>, <&qpic_bam 2>;
-			dma-names = "tx", "rx", "cmd";
-			
-			pinctrl-0 = <&nand_pins>;
-			pinctrl-names = "default";
-			
-			nand@0 {
-				compatible = "qcom,nandcs";
-				reg = <0>;
-				#address-cells = <1>;
-				#size-cells = <1>;
-				
-				nand-ecc-strength = <4>;
-				nand-ecc-step-size = <512>;
-				nand-bus-width = <8>;
-			
-				partitions {
-				
-					compatible = "fixed-partitions";
-					#address-cells = <1>;
-					#size-cells = <1>;
-					
-					/* 8MB BOOTLOADER LAYOUT */
-					partition@0 { label = "0:SBL1"; reg = <0x0 0x40000>; read-only; };
-					partition@40000 { label = "0:MIBIB"; reg = <0x40000 0x20000>; read-only; };
-					partition@60000 { label = "0:QSEE"; reg = <0x60000 0x60000>; read-only; };
-					partition@c0000 { label = "0:CDT"; reg = <0xc0000 0x10000>; read-only; };
-					partition@d0000 { label = "0:DDRPARAMS"; reg = <0xd0000 0x10000>; read-only; };
-					partition@e0000 { label = "0:APPSBLENV"; reg = <0xe0000 0x10000>; };
-					partition@f0000 { label = "0:APPSBL"; reg = <0xf0000 0x80000>; read-only; };
-					partition@170000 { label = "0:ART"; reg = <0x170000 0x10000>; read-only; };
-					
-					/* 128MB NAND LAYOUT */
-					/* Critical: Physical offsets calculated from sequential layout */
-					partition@180000 { label = "rootfs"; reg = <0x180000 0x3000000>; };
-					partition@3180000 { label = "rootfs_1"; reg = <0x3180000 0x3000000>; };
-					partition@6180000 { label = "overlay"; reg = <0x6180000 0x2000000>; };
-				
-				};
-				/*end of partition block */
-			};
-			/* end of nand@0 block */
-		};
-		/* end of &nand block */
-
-	};
-	/* end of soc block */
-
 };
 /* end of root block */
 
 
 
-&usb3 {
-	status = "okay";
-	dr_mode = "host";
-	phys = <&usb3_hs_phy>, <&usb3_ss_phy>;
-	phy-names = "usb2-phy", "usb3-phy";
-	/* vbus-supply removed because GPIO 48 hog handles power enable */
-};   
-
-&usb3_hs_phy {
-	status = "okay";
-};
-
-&usb3_ss_phy {
-	status = "okay";
-};
-
-&usb2 {
-	status = "okay";
-};
-
-&usb2_hs_phy {
-	status = "okay";
-};
 
 &blsp1_uart1 {
 	status = "okay";
@@ -154,6 +53,9 @@
 	pinctrl-0 = <&tew_uart1_pins>;
 	pinctrl-names = "default";
 };   
+
+
+
 
 &tlmm {
 
@@ -246,13 +148,71 @@
 	};
 	/* end of pinmux/gpios */
 	
-};   
+};
+/* end of &tlmm */
 
-/* CHANGE 5: Add Switch Configuration if not present in the .dtsi */
+
+
+
+&usb3 {
+	status = "okay";
+	dr_mode = "host";
+	phys = <&usb3_hs_phy>, <&usb3_ss_phy>;
+	phy-names = "usb2-phy", "usb3-phy";
+	/* vbus-supply removed because GPIO 48 hog handles power enable */
+};
+
+&usb3_hs_phy {
+	status = "okay";
+};
+
+&usb3_ss_phy {
+	status = "okay";
+};
+
+&usb2 {
+	status = "okay";
+};
+
+&usb2_hs_phy {
+	status = "okay";
+};
+
+
+
+
+&wifi0 {
+	status = "okay";
+	nvmem-cells = <&caldata_art_0>;
+	nvmem-cell-names = "calibration";
+};
+
+&wifi1 {
+	status = "okay";
+	nvmem-cells = <&caldata_art_1000>;
+	nvmem-cell-names = "calibration";
+};
+
+&art {
+	compatible = "nvmem-cells";
+	#address-cells = <1>;
+	#size-cells = <1>;
+	macaddr_art_0: macaddr@0 { reg = <0x0 0x6>; };
+	caldata_art_0: caldata@1000 { reg = <0x1000 0x2f20>; };
+	caldata_art_1000: caldata@5000 { reg = <0x5000 0x2f20>; };
+};
+
+
+
+
+//TODO:
+
+/* CHANGE 1: ADD NAND - fucking nand is impossible, memory address conflicts with qcom-ipq4019.dtsi
+
+/* CHANGE 2: Add Switch Configuration if not present in the .dtsi */
 /* The AP-DK04.1.dtsi might not have the specific QCA8337 setup for the TEW-829DRU */
 /* If the SDK .dtsi already has the switch defined correctly, you can skip this. */
 /* If not, append the &gmac1 and &mdio blocks here (from previous steps). */
 
 
-/* CHANGE 6: Add wifi from existing/old DTS config attempts, and copy board*.bin (CALDATA) files */
-
+/* CHANGE 3: Add wifi from existing/old DTS config attempts, and copy board*.bin (CALDATA) files */
