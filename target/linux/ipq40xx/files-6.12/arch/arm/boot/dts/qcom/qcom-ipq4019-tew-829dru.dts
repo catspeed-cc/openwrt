@@ -6,8 +6,8 @@
  *		What is working?
  *
  *			- CPU
-			- RAM
-			- 8MB Flash (Macronix MX25L6433F SPI NOR 8MB // dual bootloader, ART, etc.)
+ *			- RAM
+ *			- 8MB Flash (Macronix MX25L6433F SPI NOR 8MB // dual bootloader, ART, etc.)
  *			- UART
  *			- USB
  *
@@ -57,7 +57,7 @@
 		#address-cells = <1>;
         #size-cells = <1>;
 		
-		compatible = "micron,n25q128a11", "jedec,spi-nor";
+		compatible = "mx25l6405d", "jedec,spi-nor";
 		
 		reg = <0>;
 		spi-max-frequency = <24000000>;
