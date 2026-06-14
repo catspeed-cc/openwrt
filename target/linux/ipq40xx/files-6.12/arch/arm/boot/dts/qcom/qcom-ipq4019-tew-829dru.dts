@@ -29,8 +29,7 @@
 	compatible = "trendnet,tew-829dru", "qcom,ipq4019-dk04.1-c1", "qcom,ipq4019";
 	
 	chosen {
-		/* For Mainline/OpenWrt 21.02+ kernels: */
-		bootargs = "console=ttyHSL0,115200n8 rootfstype=squashfs,jffs2 iommu.passthrough=1";
+		bootargs = "console=ttyMSM0,115200n8 rootfstype=squashfs,jffs2 iommu.passthrough=1 earlyprintk";
 	};
 	
 	aliases {
@@ -317,32 +316,68 @@
 
 
 
-
-/*
-// disabled for now, work on it later
+/* QCA4019 2GHZ */
 &wifi0 {
     status = "okay";
-    nvmem-cells = <&caldata_art_1000>;
-    nvmem-cell-names = "calibration";
     qcom,ath10k-calibration-variant = "TEW-829DRU-2G";
+    nvmem-cells = <&caldata_art_1000>;
+    nvmem-cell-names = "pre-calibration";
 };
 
+/* QCA4019 5GHZ */
 &wifi1 {
     status = "okay";
-    nvmem-cells = <&caldata_art_5000>;
-    nvmem-cell-names = "calibration";
     qcom,ath10k-calibration-variant = "TEW-829DRU-5G";
+    nvmem-cells = <&caldata_art_5000>;
+    nvmem-cell-names = "pre-calibration";
 };
 
-&art {
+/* QCA9984 5GHZ */
+&pcie0 {
+    status = "okay";
+
+    pcie_bridge0: pcie@0 {
+        device_type = "pci";
+        reg = <0x0 0x0 0x0 0x0 0x0>;
+        bus-range = <0x01 0xff>;
+        #address-cells = <3>;
+        #size-cells = <2>;
+        ranges;
+
+        wifi@0,0 {
+            compatible = "qcom,ath10k";
+            reg = <0x00010000 0 0 0 0>;
+            nvmem-cells = <&caldata_art_9000>;
+            nvmem-cell-names = "pre-calibration";
+        };
+    };
+};
+
+/* ART data / caldata for wifi */
+&art_part {
     compatible = "nvmem-cells";
     #address-cells = <1>;
     #size-cells = <1>;
-    macaddr_art_0: macaddr@0 { reg = <0x0 0x6>; };
-    caldata_art_1000: caldata@1000 { reg = <0x1000 0x2f20>; };
-    caldata_art_5000: caldata@5000 { reg = <0x5000 0x2f20>; };
+
+    macaddr_art_0: macaddr@0 {
+        reg = <0x0 0x6>;
+    };
+
+    /* QCA4019 2.4GHz - AHB radio wifi0 */
+    caldata_art_1000: caldata@1000 {
+        reg = <0x1000 0x2f20>;
+    };
+
+    /* QCA4019 5GHz - AHB radio wifi1 */
+    caldata_art_5000: caldata@5000 {
+        reg = <0x5000 0x2f20>;
+    };
+
+    /* QCA9984 5GHz - PCIe radio */
+    caldata_art_9000: caldata@9000 {
+        reg = <0x9000 0x2f20>;
+    };
 };
-*/
 
 
 
