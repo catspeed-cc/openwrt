@@ -33,6 +33,20 @@
 		bootargs = "console=ttyHSL0,115200n8 rootfstype=squashfs,jffs2 iommu.passthrough=1";
 	};
 	
+	aliases {
+		mtd0 = &sbl1_part;
+		mtd1 = &mibib_part;
+		mtd2 = &qsee_part;
+		mtd3 = &cdt_part;
+		mtd4 = &ddrparams_part;
+		mtd5 = &appsblenv_part;
+		mtd6 = &appsbl_part;
+		mtd7 = &art_part;
+		mtd8 = &rootfs_part;
+		mtd9 = &rootfs_1_part;
+		mtd10 = &overlay_part;
+	};
+	
 };
 /* end of root block */
 
@@ -41,85 +55,124 @@
 
 &blsp1_spi1 {
 
-	/* 8MB FLASH CHIP (Macronix MX25L6433F SPI NOR 8MB) */
-	status = "okay";
-	
-	pinctrl-0 = <&spi_0_pinmux>;
-	pinctrl-names = "default";
-	
-	cs-gpios = <&tlmm 12 GPIO_ACTIVE_HIGH>;
+    /* 8MB FLASH CHIP (Macronix MX25L6433F SPI NOR 8MB) */
+    status = "okay";
 
-	flash: flash@0 {
-		
-		#address-cells = <1>;
+    pinctrl-0 = <&spi_0_pinmux>;
+    pinctrl-names = "default";
+
+    cs-gpios = <&tlmm 12 GPIO_ACTIVE_HIGH>;
+
+    flash: flash@0 {
+
+        #address-cells = <1>;
         #size-cells = <1>;
-		
-		compatible = "mx25l6405d", "jedec,spi-nor";
-		
-		reg = <0>;
-		spi-max-frequency = <24000000>;
 
-		partitions {
-			compatible = "fixed-partitions";
-			#address-cells = <1>;
-			#size-cells = <1>;
+        compatible = "mx25l6405d", "jedec,spi-nor";
 
-			partition@0 {
-				label = "SBL1";
-				reg = <0x0 0x40000>;
-				read-only;
-			};
+        reg = <0>;
+        spi-max-frequency = <24000000>;
 
-			partition@40000 {
-				label = "MIBIB";
-				reg = <0x40000 0x80000>;
-				read-only;
-			};
+        partitions {
+            compatible = "fixed-partitions";
+            #address-cells = <1>;
+            #size-cells = <1>;
 
-			partition@c0000 {
-				label = "QSEE";
-				reg = <0xc0000 0x80000>;
-				read-only;
-			};
+            sbl1_part: partition@0 {
+                label = "SBL1";
+                reg = <0x0 0x40000>;
+                read-only;
+            };
 
-			partition@140000 {
-				label = "CDT";
-				reg = <0x140000 0x80000>;
-				read-only;
-			};
+            mibib_part: partition@40000 {
+                label = "MIBIB";
+                reg = <0x40000 0x20000>;
+                read-only;
+            };
 
-			partition@1c0000 {
-				label = "DDRPARAMS";
-				reg = <0x1c0000 0x10000>;
-				read-only;
-			};
+            qsee_part: partition@60000 {
+                label = "QSEE";
+                reg = <0x60000 0x60000>;
+                read-only;
+            };
 
-			partition@1d0000 {
-				label = "APPSBL";
-				reg = <0x1d0000 0x80000>;
-				read-only;
-			};
+            cdt_part: partition@c0000 {
+                label = "CDT";
+                reg = <0xc0000 0x10000>;
+                read-only;
+            };
 
-			partition@250000 {
-				label = "APPSBLENV";
-				reg = <0x250000 0x10000>;
-			};
+            ddrparams_part: partition@d0000 {
+                label = "DDRPARAMS";
+                reg = <0xd0000 0x10000>;
+                read-only;
+            };
 
-			art: partition@260000 {
-				label = "ART";
-				reg = <0x260000 0x30000>;
-				read-only;
-			};
+            appsblenv_part: partition@e0000 {
+                label = "APPSBLENV";
+                reg = <0xe0000 0x10000>;
+            };
 
-			partition@290000 {
-				label = "HLOS";
-				reg = <0x290000 0x100000>;
-				read-only;
-			};
-		};
-	};
+            appsbl_part: partition@f0000 {
+                label = "APPSBL";
+                reg = <0xf0000 0x80000>;
+                read-only;
+            };
+
+            art_part: partition@170000 {
+                label = "ART";
+                reg = <0x170000 0x10000>;
+                read-only;
+            };
+        };
+    };
 };
 /* end of &blsp1_spi1 (Macronix MX25L6433F SPI NOR 8MB) */
+
+/* start of &qpic_bam (for Micron MT29F1G08ABADA NAND 128MB) */
+&qpic_bam {
+    status = "okay";
+};
+/* end of &qpic_bam (Micron MT29F1G08ABADA NAND 128MB) */
+/* start of &nand (Micron MT29F1G08ABADA NAND 128MB) */
+&nand {
+    status = "okay";
+
+    nand@0 {
+        reg = <0>;
+
+        /* Micron MT29F1G08ABADA: 128MB, 8-bit bus, 4-bit ECC */
+        nand-ecc-strength = <4>;
+        nand-ecc-step-size = <512>;
+        nand-bus-width = <8>;
+
+        partitions {
+            compatible = "fixed-partitions";
+            #address-cells = <1>;
+            #size-cells = <1>;
+
+            /* Primary boot image: kernel + ubi_rootfs UBI volumes */
+            rootfs_part: partition@0 {
+                label = "rootfs";
+                reg = <0x00000000 0x03000000>; /* 48MB */
+            };
+
+            /* Secondary/failsafe boot image: kernel + ubi_rootfs UBI volumes */
+            rootfs_1_part: partition@3000000 {
+                label = "rootfs_1";
+                reg = <0x03000000 0x03000000>; /* 48MB */
+            };
+
+            /* Persistent config overlay: rootfs_data UBI volume */
+            overlay_part: partition@6000000 {
+                label = "overlay";
+                reg = <0x06000000 0x02000000>; /* 32MB */
+            };
+        };
+    };
+};
+/* end of &nand (Micron MT29F1G08ABADA NAND 128MB) */
+
 
 
 
@@ -262,28 +315,34 @@
 
 
 
+
+
+
+/*
+// disabled for now, work on it later
 &wifi0 {
-	status = "okay";
-	nvmem-cells = <&caldata_art_0>;
-	nvmem-cell-names = "calibration";
-	qcom,ath10k-calibration-variant = "TEW-829DRU-2G";
+    status = "okay";
+    nvmem-cells = <&caldata_art_1000>;
+    nvmem-cell-names = "calibration";
+    qcom,ath10k-calibration-variant = "TEW-829DRU-2G";
 };
 
 &wifi1 {
-	status = "okay";
-	nvmem-cells = <&caldata_art_1000>;
-	nvmem-cell-names = "calibration";
-	qcom,ath10k-calibration-variant = "TEW-829DRU-5G";
+    status = "okay";
+    nvmem-cells = <&caldata_art_5000>;
+    nvmem-cell-names = "calibration";
+    qcom,ath10k-calibration-variant = "TEW-829DRU-5G";
 };
 
 &art {
-	compatible = "nvmem-cells";
-	#address-cells = <1>;
-	#size-cells = <1>;
-	macaddr_art_0: macaddr@0 { reg = <0x0 0x6>; };
-	caldata_art_0: caldata@1000 { reg = <0x1000 0x2f20>; };
-	caldata_art_1000: caldata@5000 { reg = <0x5000 0x2f20>; };
+    compatible = "nvmem-cells";
+    #address-cells = <1>;
+    #size-cells = <1>;
+    macaddr_art_0: macaddr@0 { reg = <0x0 0x6>; };
+    caldata_art_1000: caldata@1000 { reg = <0x1000 0x2f20>; };
+    caldata_art_5000: caldata@5000 { reg = <0x5000 0x2f20>; };
 };
+*/
 
 
 
