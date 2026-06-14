@@ -28,9 +28,6 @@
 	model = "TRENDnet TEW-829DRU";
 	compatible = "trendnet,tew-829dru", "qcom,ipq4019-dk04.1-c1", "qcom,ipq4019";
 	
-	/* temporary, delete the inherited reserved memory node */
-	/delete-node/ reserved-memory;
-	
 	chosen {
 		/* For Mainline/OpenWrt 21.02+ kernels: */
 		bootargs = "console=ttyHSL0,115200n8 rootfstype=squashfs,jffs2 iommu.passthrough=1";
@@ -269,12 +266,14 @@
 	status = "okay";
 	nvmem-cells = <&caldata_art_0>;
 	nvmem-cell-names = "calibration";
+	qcom,ath10k-calibration-variant = "TEW-829DRU-2G";
 };
 
 &wifi1 {
 	status = "okay";
 	nvmem-cells = <&caldata_art_1000>;
 	nvmem-cell-names = "calibration";
+	qcom,ath10k-calibration-variant = "TEW-829DRU-5G";
 };
 
 &art {

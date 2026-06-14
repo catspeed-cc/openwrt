@@ -71,3 +71,7 @@ extracted.dtb
 
 # secret(s)
 *_PAC*
+
+# proprietary, device specific, calibration data
+package/firmware/ipq-wifi/files/board-trendnet_tew-829dru.QCA9984
+package/firmware/ipq-wifi/files/board-trendnet_tew-829dru.QCA4019
