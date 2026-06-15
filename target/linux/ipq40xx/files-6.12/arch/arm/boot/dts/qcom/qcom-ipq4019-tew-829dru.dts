@@ -532,7 +532,7 @@ edma {
  qcom-ipq4019.dtsi (upstream)			stock-fixed.dts (mfr)
  gmac: ethernet@c080000			->		edma@c080000				Delete nodes, redefine as per mfr.
 																	In the case of upstream, this is "gmac" and no other gmac's are defined. In the case of mfr, this defines an edma-encapsulated gmac0-2
-																	These gmac0-2 aka eth0-2 are theorized to be eth0/wan1, eth1/lan (with two side by side switches), and eth2/wan2
+																	These gmac0-2 aka eth0-2 are suspected to be eth0/wan1, eth1/lan (with two side by side switches), and eth2/wan2
 																	the mfr has defined gmac0 and gmac2 to have extra configuration (speed, duplex, etc.) whereas gmac1 is rather simple with less configuration
 																	due to gmac1 having unique, minimal configuration, I suspect this to be the two switches QCA8337 & QCA8075 (4+4 LAN ports = 8 LAN ports)
 																	due to gmac0 & gmac2 having extra configuration (speed, duplex, etc.) I suspect these to be wan1 and wan2
