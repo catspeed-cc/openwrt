@@ -537,7 +537,7 @@ edma {
 																	due to gmac1 having unique, minimal configuration, I suspect this to be the two switches QCA8337 & QCA8075 (4+4 LAN ports = 8 LAN ports)
 																	due to gmac0 & gmac2 having extra configuration (speed, duplex, etc.) I suspect these to be wan1 and wan2
 																	
- switch: switch@c000000			-> 		ess-switch@c000000			Keep upstream node (QCA8337), mfr proprietary LED control not needed.
+ switch: switch@c000000			-> 		ess-switch@c000000			Redefine upstream node (QCA8337) at correct mfr hardware address, mfr proprietary LED control not needed.
 																	upstream: switch@c000000 is a switch (QCA8337) we will keep / mfr: ess-switch@c000000 is a proprietary LED controller we will not include
 																	ess-switch from mfr is not needed. I believe this is how the mfr connects LED's to their source. It contains led_source@0-4 a total of 5 LED's (presumably pwr,wps,2.4g,5g1,5g2)
  																	I believe this is the proprietary LED controller that abstracts and hides gpio information FOR LEDS from the developer attempting to port the device.
@@ -581,6 +581,6 @@ IF the LED controler occupied c000000 that means the mfr put the QCA8337 somewhe
 we could keep QCA8075 where it is, given mfr also places it at same hardware address 90000.
 
 - Keep mdio (QCA8075) at 90000 (hardware address matches upstream:mfr)
-- Redefine upstream switch@c000000 at the correct hardware address from mfr
+- Redefine upstream switch@c000000 (QCA8337) at the correct hardware address from mfr (where is it?)
 
 */
