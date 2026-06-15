@@ -468,7 +468,7 @@ Making gmac0/gmac2 aka eth0/eth2 the wan ports, leaving gmac1 aka eth1 for the t
 
 I think this is it. It kinda makes sense. Even the config in the DTS, eth1 being minimal vs eth0 and eth2 being more config - speed, duplex, poll required, etc.
 
-Open WRT then takes information coming/going to/from wan1/lan1-8/wan2 aka eth0/eth1/eth2 aka gmac0/gmac1/gmac2 respectively after applying firewall rules, then patches them together allowing the data transfer between them.
+OpenWRT then takes information coming/going to/from wan1/lan1-8/wan2 aka eth0/eth1/eth2 aka gmac0/gmac1/gmac2 respectively after applying firewall rules, then patches them together allowing the data transfer between them.
 
 - This indicates a high security model, which would fit for a SMB router. 
 - It also provides physical/visual separation of our concerns (wan1, wan2, and lan) for security purposes. 
@@ -481,4 +481,54 @@ And it just makes kinda sense no?
 
 
 
+/* disabled temporarily
+// theoretical attempt
+// would need to define the ones not defined or redefine/override existing ones in qcom-ipq4019 to create mfr config
+// perhaps all encapsulated in edma switch?
+edma {
+	// GMAC0: WAN1
+	gmac0: ethernet@98000 {
+		status = "okay";
+		phy-mode = "sgmii";
+		qcom,id = <1>;
+		nvmem-cells = <&macaddr_art_0>;
+		nvmem-cell-names = "mac-address";
+		fixed-link { speed = <1000>; full-duplex; pause; };
+	};
 
+	gmac1 {
+
+		// switch 1
+		// switch 2
+		// or very basic config, and init scripts attach switches to it (switches being defined elsewhere in DTS)
+
+	};
+
+	// GMAC2: WAN2
+	gmac2: ethernet@99000 {
+		status = "okay";
+		phy-mode = "rgmii";
+		qcom,id = <2>;
+		tx-internal-delay-ps = <1000>;
+		rx-internal-delay-ps = <1000>;
+		fixed-link { speed = <1000>; full-duplex; };
+	};
+}
+/* disabled temporarily
+
+/*
+
+ upstream only has "gmac" but our highly specialized configuration requires 3 gmac.
+ 
+ I suggest we delete any upstream nodes ("gmac") , and define our own in the SOC block just as the manufacturer has for gmac0 gmac1 and gmac2.
+ 
+ As for switches, we defined them, but dont connect - init scripts connect them to gmac1
+ 
+ qcom-ipq4019.dtsi					stock-fixed.dts (mfr)
+ switch: switch@c000000		-> 		ess-switch@c000000			(possible override? or redefine in soc?)
+ 
+							->		mdio@90000					(4 ports...)
+
+going to sleep. think and resume tomorrow.
+
+*/
