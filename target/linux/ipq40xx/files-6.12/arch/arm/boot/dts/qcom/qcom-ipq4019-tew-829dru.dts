@@ -548,6 +548,7 @@ edma {
 																	upstream: 5 phy, QCA8337/QCA8075 switches daisy chained / mfr: 4 ports, not possible to be daisychained...
 																	mfr DTS does not indicate whether this is QCA8337 or QCA8075 - it must be one, and the other which is missing must be configured elsewhere (outside DTS?)
 																	mfr defines ethernet-phy@0-4 in this block, it must be 4 of 8 LAN ports (one of the two switches)
+																	answer from below: this must be QCA8075
  
  I have yet to find the second switch. Perhaps it is configured with init scripts?
  We need to find the other ethernet-phy (there should be another 4 somewhere to total 8 LAN ports)
@@ -570,5 +571,8 @@ QUESTIONS:
 	- to me this indicates both switches are compatible with both configurations
 	- if we do that , what are the possible negative effects?
 	- we would still require them to end up connected to gmac1
+	
+NOTE RE: ADDRESS SPACE CONFLICTS:
+the table is correct, however instead of deleting upstream mdio@9000 (QCA8075) we should use it as it is, and connect the QCA8337 daisy chained as upstream does - disregarding mfr - though still needs to be connected to gmac1/eth1
 
 */
