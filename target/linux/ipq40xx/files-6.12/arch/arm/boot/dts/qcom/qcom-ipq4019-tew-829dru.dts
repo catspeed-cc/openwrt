@@ -527,15 +527,24 @@ edma {
  
  Then OpenWRT handles the communication between wan1, lan, wan2 based on it's firewall rules, etc. with physical separation between the security concerns as expected for an SMB device.
  
+ ### ADDRESS SPACE CONFLICTS ###
+ 
  qcom-ipq4019.dtsi (upstream)			stock-fixed.dts (mfr)
- switch: switch@c000000			-> 		ess-switch@c000000			Delete nodes.
+ gmac: ethernet@c080000			->		edma@c080000				Delete nodes, redefine as per mfr.
+																	In the case of upstream, this is "gmac" and no other gmac's are defined. In the case of mfr, this defines an edma-encapsulated gmac0-2
+																	These gmac0-2 aka eth0-2 are theorized to be eth0/wan1, eth1/lan (with two side by side switches), and eth2/wan2
+																	the mfr has defined gmac0 and gmac2 to have extra configuration (speed, duplex, etc.) whereas gmac1 is rather simple with less configuration
+																	due to gmac1 having unique, minimal configuration, I suspect this to be the two switches QCA8337 & QCA8075 (4+4 LAN ports = 8 LAN ports)
+																	due to gmac0 & gmac2 having extra configuration (speed, duplex, etc.) I suspect these to be wan1 and wan2
+																	
+ switch: switch@c000000			-> 		ess-switch@c000000			Delete nodes, do not redefine. Not needed.
 																	upstream: switch@c000000 is a switch / mfr: ess-switch@c000000 is a proprietary LED controller
 																	ess-switch from mfr is not needed. I believe this is how the mfr connects LED's to their source. It contains led_source@0-4 a total of 5 LED's (pwr,wps,2.4g,5g1,5g2)
  																	I believe this is the proprietary LED controller that abstracts and hides gpio information FOR LEDS from the developer attempting to port the device.
  																	this combined with lack of GPIO mapping information prevents successful port of devices without advanced/risky technique (probing GPIO and possibly damaging hardware)
 																	how juvenile to prevent access to LEDS FFS!
  																	
- mdio: mdio@90000				->		mdio@90000					Redefine as per mfr.
+ mdio: mdio@90000				->		mdio@90000					Delete nodes, redefine as per mfr.
 																	upstream: 5 phy, switches daisy chained / mfr: 4 ports, not possible to be daisychained...
 																	mfr DTS does not indicate whether this is QCA8337 or QCA8075 - it must be one, and the other which is missing must be configured elsewhere (outside DTS?)
 																	mfr defines ethernet-phy@0-4 in this block, it must be 4 of 8 LAN ports (one of the two switches)
