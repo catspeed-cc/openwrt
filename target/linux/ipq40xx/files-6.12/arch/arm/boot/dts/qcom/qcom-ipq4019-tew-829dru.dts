@@ -537,14 +537,14 @@ edma {
 																	due to gmac1 having unique, minimal configuration, I suspect this to be the two switches QCA8337 & QCA8075 (4+4 LAN ports = 8 LAN ports)
 																	due to gmac0 & gmac2 having extra configuration (speed, duplex, etc.) I suspect these to be wan1 and wan2
 																	
- switch: switch@c000000			-> 		ess-switch@c000000			Delete upstream nodes, do not redefine. Not needed.
-																	upstream: switch@c000000 is a switch (QCA8337) we will define elsewhere / mfr: ess-switch@c000000 is a proprietary LED controller
+ switch: switch@c000000			-> 		ess-switch@c000000			Keep upstream node (QCA8337), mfr proprietary LED control not needed.
+																	upstream: switch@c000000 is a switch (QCA8337) we will keep / mfr: ess-switch@c000000 is a proprietary LED controller we will not include
 																	ess-switch from mfr is not needed. I believe this is how the mfr connects LED's to their source. It contains led_source@0-4 a total of 5 LED's (presumably pwr,wps,2.4g,5g1,5g2)
  																	I believe this is the proprietary LED controller that abstracts and hides gpio information FOR LEDS from the developer attempting to port the device.
  																	this combined with lack of GPIO mapping information prevents successful port of devices without advanced/risky technique (probing GPIO and possibly damaging hardware)
 																	how juvenile to prevent access to LEDS FFS!
  																	
- mdio: mdio@90000				->		mdio@90000					Delete upstream nodes, redefine as per mfr.
+ mdio: mdio@90000				->		mdio@90000					Keep upstream node (QCA8075), ignore mfr definition.
 																	upstream: 5 phy, QCA8337/QCA8075 switches daisy chained / mfr: 4 ports, not possible to be daisychained...
 																	mfr DTS does not indicate whether this is QCA8337 or QCA8075 - it must be one, and the other which is missing must be configured elsewhere (outside DTS?)
 																	mfr defines ethernet-phy@0-4 in this block, it must be 4 of 8 LAN ports (one of the two switches)
@@ -573,6 +573,8 @@ QUESTIONS:
 	- we would still require them to end up connected to gmac1
 	
 NOTE RE: ADDRESS SPACE CONFLICTS:
-the table is correct, however instead of deleting upstream mdio@9000 (QCA8075) we should use it as it is, and connect the QCA8337 daisy chained as upstream does - disregarding mfr - though still needs to be connected to gmac1/eth1
+the table is corrected, instead of deleting upstream mdio@9000 (QCA8075) we should use it as it is, and connect the QCA8337 daisy chained as upstream does - disregarding mfr - though still needs to be connected to gmac1/eth1
+
+if we do not add the proprietary LED controller (why would we?) we free up that space for the QCA8337
 
 */
