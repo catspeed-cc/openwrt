@@ -545,11 +545,28 @@ edma {
 																	how juvenile to prevent access to LEDS FFS!
  																	
  mdio: mdio@90000				->		mdio@90000					Delete upstream nodes, redefine as per mfr.
-																	upstream: 5 phy, switches daisy chained / mfr: 4 ports, not possible to be daisychained...
+																	upstream: 5 phy, QCA8337/QCA8075 switches daisy chained / mfr: 4 ports, not possible to be daisychained...
 																	mfr DTS does not indicate whether this is QCA8337 or QCA8075 - it must be one, and the other which is missing must be configured elsewhere (outside DTS?)
 																	mfr defines ethernet-phy@0-4 in this block, it must be 4 of 8 LAN ports (one of the two switches)
  
  I have yet to find the second switch. Perhaps it is configured with init scripts?
  We need to find the other ethernet-phy (there should be another 4 somewhere to total 8 LAN ports)
  
+ Wait... Is it possible, the mfr does not daisy chain and configs the other switch via other means, but in the case of OpenWRT they just daisy chain them and it works?
+ If qcom-ipq4019.dtsi defines both a QCA8337 & QCA8075 presumably they would work in the daisy chained configuration - they are the same switches after all ...
+ Perhaps we go the daisy chain route, even though mfr does not? What are effects of this? It would still give us 8 LAN ports. The hardware in both cases - upstream and mfr - is the same (QCA8337, QCA8075)
+ 
+ YES, qcom-ipq4019.dtsi defines *BOTH* QCA8337 & QCA8075! That means we possibly can use their implementation instead, the switches are the exact same!
+ but the hardware address might be different ... upstream: switch@c000000 (QCA8337) & mdio@90000 (QCA8075)
+ we can use them but must make sure hardware lies at these exact addresses. 
+
+ ANSWER: mdio@90000 in upstream matches mdio@90000 in mfr and is a switch. This must be the QCA8075
+		 that leaves the unknown switch to be the QCA8337
+
+QUESTIONS:
+	- where is the QCA8337?
+	- how is the QCA8337 initialized by the mfr?
+	- given both upstream and mfr use exact same hardware (QCA8337 & QCA8075) can we configure ours like upstream instead of mfr?
+	- if we do that , what are the possible negative effects?
+
 */
