@@ -577,4 +577,7 @@ the table is corrected, instead of deleting upstream mdio@9000 (QCA8075) we shou
 
 if we do not add the proprietary LED controller (why would we?) we free up that space for the QCA8337
 
+IF the LED controler occupied c000000 that means the mfr put the QCA8337 somewhere else. Do we need to find the address, and redefine QCA8337 at that address so the hardware address matches the switch address in software?
+we could keep QCA8075 where it is, given mfr also places it at same hardware address 90000.
+
 */
