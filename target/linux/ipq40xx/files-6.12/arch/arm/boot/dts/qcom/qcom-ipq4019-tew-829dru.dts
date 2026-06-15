@@ -10,12 +10,12 @@
  *			- 8MB Flash (Macronix MX25L6433F SPI NOR 8MB // dual bootloader, ART, etc.)
  *			- UART
  *			- USB
+  *			- wifi (QCA9984, QCA4019)
  *
  *		What is NOT working?
  *
  *			- 128MB nand (Micron MT29F1G08ABADA NAND 128MB // 2x kernel, 2x rootfs, 1x rootfs_data)
  *			- switches (QCA8075, QCA8335)
- *			- wifi (QCA9984, * wifi I did get working, I just have to copy the DTS code + board.bin binary back)
  *
  *	WARNING: ENSURE BOARD.BIN AND CALDATA IS NOT COMMITTED TO GIT REPOSITORY (INTELLECTUAL PROPERTY CONCERNS)
  *
@@ -394,3 +394,91 @@
 
 
 /* CHANGE 3: Add wifi from existing/old DTS config attempts, and copy board*.bin (CALDATA) files */
+
+
+
+
+
+/* 
+ * CRITICAL FIX: Explicitly define gmac0 and gmac1 inside &edma 
+ * because the base dtsi in your kernel tree lacks the global labels.
+ *
+ * human note: the above AI explanation seems hallucinatory and wrong.
+ *
+ */
+ /* disabled temporarily
+&gmac {
+	status = "okay";
+
+	// GMAC0: SGMII -> QCA8337 (Switch 0)
+	gmac0: ethernet@98000 {
+		status = "okay";
+		phy-mode = "sgmii";
+		qcom,id = <1>;
+		nvmem-cells = <&macaddr_art_0>;
+		nvmem-cell-names = "mac-address";
+		fixed-link { speed = <1000>; full-duplex; pause; };
+	};
+
+	// GMAC1: RGMII -> QCA8075 (Switch 1)
+	gmac1: ethernet@99000 {
+		status = "okay";
+		phy-mode = "rgmii";
+		qcom,id = <2>;
+		tx-internal-delay-ps = <1000>;
+		rx-internal-delay-ps = <1000>;
+		fixed-link { speed = <1000>; full-duplex; };
+	};
+};
+/* disabled temporarily
+
+/*
+
+
+*THINKING HARD*
+
+8 LAN + 2 WAN (DSA, two switches QCA8337, QCA8075)
+This is definitely wrong, the manufacturer specifies gmac0, gmac1, gmac2 none of which are nested under eachother.
+Unsure as to their role but these are eth0-2
+QCA8075 being rgmii and QCA8337 being sgmii is confirmed, I know that.
+Manufacturer shows one of the GMAC with minimal config, only a mac of all 0's and a vlan_tag.
+The two switches are possibly GMAC0 and GMAC2 due to the presence of more configuration on two of the three gmac in manufacturer config.
+This leaves me the question, WTF is gmac1 for?
+Who cares. We need to replicate the manufacturer. They have gmac0, gmac1, gmac2 inside of an edma node. I don't know why.
+Do we just define gmac0, gmac1, gmac2 outside at top level, or do they need to be nested under edma node?
+Also one switch is "switch" and the other is "mdio". They both have 4 phy's in the manufacturer DTS. 4+4 = 8 - is that our 8 LAN? Where are our WAN? Does that mean our WAN are the gmac0 and gmac2? What is gmac1 then?
+Either gmac0 and gmac2 are switches, or they are WAN ports, or something.
+Although other routers have wan/wan6 in openwrt showing on the same eth device (in the AC1750 case, eth0.2)
+If wan1 and wan 2 are one device, this leads me to believe the other device, is the SWITCH?
+So in my case, wan1 and wan2 (its dual wan) would be on one eth?
+Or eth0 wan 1 and eth2 wan2 ? <--- this...?
+Then what eth1 ? <--- soooo....? (remember minimal config, vlan tag differs from the others)
+THE SWITCHES? BOTH SWITCHES ON ETH1? ETH0 = WAN1 and ETH2 = WAN2? <--- it must be,... does it sound right?
+
+
+** My best guess **
+qcom-ipq4019.dtsi has 5 ports per switch, daisy chained(?) - as per the manufacturer config they have 4 per switch. qcom-ipq4019.dtsi ain't us. We must emulate manufacturer here, switch config highly custom.
+
+Wans being physical ports and not on switches is what I would do, and then have LANs on switches. Explains why manufacturer has 4 ports per switch in their config (8 LAN ports). 
+Making gmac0/gmac2 aka eth0/eth2 the wan ports, leaving gmac1 aka eth1 for the two switches (QCA8337, QCA8075).
+
+- eth0/gmac0 - wan 1 (physical, explains added config)
+- eth1/gmac1 - QCA8337, QCA8075 (virtual-ish? explains less config? patches the two switches together, enables patching switches to wan 1 or wan 2)
+- eth2/gmac2 - wan 2 (physical, explains added config)
+
+I think this is it. It kinda makes sense. Even the config in the DTS, eth1 being minimal vs eth0 and eth2 being more config - speed, duplex, poll required, etc.
+
+Open WRT then takes information coming/going to/from wan1/lan1-8/wan2 aka eth0/eth1/eth2 aka gmac0/gmac1/gmac2 respectively after applying firewall rules, then patches them together allowing the data transfer between them.
+
+- This indicates a high security model, which would fit for a SMB router. 
+- It also provides physical/visual separation of our concerns (wan1, wan2, and lan) for security purposes. 
+- By default these are disconnected and physically separated.
+
+And it just makes kinda sense no?
+
+
+*/
+
+
+
+
