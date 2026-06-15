@@ -483,8 +483,9 @@ And it just makes kinda sense no?
 
 /* disabled temporarily
 // theoretical attempt
-// would need to define the ones not defined or redefine/override existing ones in qcom-ipq4019 to create mfr config
-// perhaps all encapsulated in edma switch?
+// would need to define the ones not defined or redefine/override existing ones in qcom-ipq4019.dtsi to recreate mfr config
+// perhaps all encapsulated in edma switch as mfr does?
+// also these need to be redefined within SOC and the gmac node from upstream needs to be deleted (with /delete-node/)
 edma {
 	// GMAC0: WAN1
 	gmac0: ethernet@98000 {
@@ -498,9 +499,9 @@ edma {
 
 	gmac1 {
 
-		// switch 1
-		// switch 2
-		// or very basic config, and init scripts attach switches to it (switches being defined elsewhere in DTS)
+		// nested switch 1 (QCA8337)
+		// nested switch 2 (QCA8075)
+		// or very basic config, and both switches identify gmac1 as "cpu".
 
 	};
 
@@ -518,17 +519,28 @@ edma {
 
 /*
 
- upstream only has "gmac" but our highly specialized configuration requires 3 gmac.
+ upstream only has "gmac" but our highly specialized hardware configuration from mfr requires gmac0-2.
  
- I suggest we delete any upstream nodes ("gmac") , and define our own in the SOC block just as the manufacturer has for gmac0 gmac1 and gmac2.
+ I suggest we delete any upstream nodes ("gmac") , and define our own in the SOC block just as the mfr has for gmac0 gmac1 and gmac2. The mfr has also encapsulated this within an edma block.
  
- As for switches, we defined them, but dont connect - init scripts connect them to gmac1
+ As for switches, don't we define both to use gmac1 as the "cpu" ? That would put them side by side, allowing intercommunication (via the "cpu" aka gmac1 aka eth1) between the switches (two switches, 4 lan each)
  
- qcom-ipq4019.dtsi					stock-fixed.dts (mfr)
- switch: switch@c000000		-> 		ess-switch@c000000			(possible override? or redefine in soc?)
+ Then OpenWRT handles the communication between wan1, lan, wan2 based on it's firewall rules, etc. with physical separation between the security concerns as expected for an SMB device.
  
-							->		mdio@90000					(4 ports...)
-
-going to sleep. think and resume tomorrow.
-
+ qcom-ipq4019.dtsi (upstream)			stock-fixed.dts (mfr)
+ switch: switch@c000000			-> 		ess-switch@c000000			Delete nodes.
+																	upstream: switch@c000000 is a switch / mfr: ess-switch@c000000 is a proprietary LED controller
+																	ess-switch from mfr is not needed. I believe this is how the mfr connects LED's to their source. It contains led_source@0-4 a total of 5 LED's (pwr,wps,2.4g,5g1,5g2)
+ 																	I believe this is the proprietary LED controller that abstracts and hides gpio information FOR LEDS from the developer attempting to port the device.
+ 																	this combined with lack of GPIO mapping information prevents successful port of devices without advanced/risky technique (probing GPIO and possibly damaging hardware)
+																	how juvenile to prevent access to LEDS FFS!
+ 																	
+ mdio: mdio@90000				->		mdio@90000					Redefine as per mfr.
+																	upstream: 5 phy, switches daisy chained / mfr: 4 ports, not possible to be daisychained...
+																	mfr DTS does not indicate whether this is QCA8337 or QCA8075 - it must be one, and the other which is missing must be configured elsewhere (outside DTS?)
+																	mfr defines ethernet-phy@0-4 in this block, it must be 4 of 8 LAN ports (one of the two switches)
+ 
+ I have yet to find the second switch. Perhaps it is configured with init scripts?
+ We need to find the other ethernet-phy (there should be another 4 somewhere to total 8 LAN ports)
+ 
 */
