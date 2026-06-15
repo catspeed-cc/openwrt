@@ -567,6 +567,7 @@ QUESTIONS:
 	- where is the QCA8337?
 	- how is the QCA8337 initialized by the mfr?
 	- given both upstream and mfr use exact same hardware (QCA8337 & QCA8075) can we configure ours like upstream instead of mfr?
+	- to me this indicates both switches are compatible with both configurations
 	- if we do that , what are the possible negative effects?
 
 */
