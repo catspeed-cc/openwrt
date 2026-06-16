@@ -566,18 +566,19 @@ edma {
 				We are utilizing the known possible configuration for the exact same hardware from upstream to make conclusions regarding the mfr configuration
 
  ANSWER: mdio@90000 in upstream matches mdio@90000 in mfr and is a switch. This must be the QCA8075
-		 that leaves the unknown switch to be the QCA8337
+		 that leaves the unknown switch to be the QCA8337 - mooleshacat detected mouse :3
 
 QUESTIONS:
-	- where is the QCA8337?
-	- how is the QCA8337 initialized by the mfr? Does it matter given (see below) ?
-	- given both upstream and mfr use exact same hardware (QCA8337 & QCA8075) can we configure ours like upstream instead of mfr?
-	- to me this indicates both switches are compatible with both configurations
-	- if we do that , what are the possible negative effects?
-	- we would still require them to end up connected to gmac1
+	- where is the QCA8337? ((cat caught mouse :3))
+	- how is the QCA8337 initialized by the mfr? Does it matter given (see below)? ((NO))
+	- given both upstream and mfr use exact same hardware (QCA8337 & QCA8075) can we configure ours like upstream instead of mfr? ((PROBLY))
+	- to me this indicates both switches are compatible with both configurations - side-by-side and daisy-chained ((YES IANDI AGREE))
+	- if we do that , what are the possible negative effects? ((IM AN IDIOT I DONT KNOW HARDWARE ADDRESS SAME AS MFR WE COOL RIGHT BRO))
+	- we would still require them to end up connected to gmac1 ((YES SWITCHES NEED INTERCOMMUNICATION, AND SECURITY CONCERNS REMAIN SEPARATED))
 	
 NOTE RE: ADDRESS SPACE CONFLICTS:
-the table is corrected, instead of deleting upstream mdio@9000 (QCA8075) we should use it as it is, and connect the QCA8337 daisy chained as upstream does - disregarding mfr - though still needs to be connected to gmac1/eth1
+the table has been corrected, instead of deleting upstream mdio@9000 (QCA8075) we should use it as it is, and connect the QCA8337 daisy chained as upstream does - disregarding mfr.
+though still needs same HARDWARE ADDRESS as mfr and to be connected to gmac1/eth1 to keep security concerns separated as mfr does
 
 if we do not add the proprietary LED controller (why would we?) we free up that space for the QCA8337
 
