@@ -199,13 +199,6 @@
         #address-cells = <1>;
         #size-cells = <0>;
 
-        /*
-         * Delete any upstream-injected CPU port@0.
-         * The EDMA engine is the implicit CPU-side consumer on IPQ4019 ESS.
-         * It does not need an explicit DTS port node.
-         */
-        /delete-node/ port@0;
-
         swport1: port@1 {
             reg = <1>;
             label = "wan1";
