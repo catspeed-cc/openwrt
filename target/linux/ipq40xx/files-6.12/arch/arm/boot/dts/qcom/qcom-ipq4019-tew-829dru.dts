@@ -167,7 +167,7 @@
 	 * shared MDIO bus for management access only.
 	 */
 	qca8337: switch@10 {
-		compatible = "qca,qca8337";
+		compatible = "qca,ipq4019-qca8337n";
 		#address-cells = <1>;
 		#size-cells = <0>;
 		reg = <0x10>;
@@ -186,6 +186,7 @@
 				label = "cpu";
 				ethernet = <&gmac1>;
 				phy-mode = "rgmii";
+				tag-protocol = "none";
 				fixed-link {
 					speed = <1000>;
 					full-duplex;
@@ -401,7 +402,10 @@
 /* end of &qpic_bam (Micron MT29F1G08ABADA NAND 128MB) */
 /* start of &nand (Micron MT29F1G08ABADA NAND 128MB) */
 &nand {
-    status = "okay";
+    status = "disabled";
+	
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-names;
 
     nand@0 {
         reg = <0>;
@@ -457,6 +461,10 @@
 
 
 &tlmm {
+
+	/* UPSTREAM BLOCKING PINS FOR SWITCHES! MEANS NAND PINS WERE WRONG / NAND WAS BORKED */
+	/delete-node/ nand_pins;
+	/delete-node/ nand_state;
 
 	/* Add this GPIO Hog for USB Power */
 	usb_power_en: usb-power-en {
