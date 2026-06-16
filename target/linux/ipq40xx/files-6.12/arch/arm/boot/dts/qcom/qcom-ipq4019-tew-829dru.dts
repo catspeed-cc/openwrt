@@ -593,7 +593,9 @@ Final result: eth1 { QCA8075 -> daisy chained -> QCA8337 }
 eth1 is "cpu" and QCA8075/mdio is connected to it, then QCA8337 at corrected hardware address daisy chains off QCA8075/phy5
 the entire concoction is known as gmac1/eth1/lan and provides all 8 LAN ports while gmac0/gmac2 provide wan1/wan2
 
-Slight difference from mfr but should work given the exact same switches have been used in this configuration before. We only have to find and correct QCA8337 hardware address.
+Slight difference from mfr but should work given the exact same switches have been used in this configuration before. 
+
+We only have to find and correct QCA8337 hardware address.
 
 I am cat. Switches are nothing.
 
