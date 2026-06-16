@@ -125,113 +125,154 @@
 };
 /* end of root block */
 
-&switch {
-    status = "okay";
-	
-	psgmii-ethphy = <&ethphy13>;
-	
-    /* Override: connect CPU port to edma, not upstream gmac */
-    ports {
-        port@0 {
-            /* CPU port - connects to gmac1/eth1 for LAN */
-            reg = <0>;
-            label = "cpu";
-            ethernet = <&gmac1>;
-            phy-mode = "internal";
+&mdio {
+	status = "okay";
+	pinctrl-0 = <&mdio_pins>;
+	pinctrl-names = "default";
 
-            fixed-link {
-                speed = <1000>;
-                full-duplex;
-                pause;
-                asym-pause;
-            };
-        };
+	/* QCA8075: 5 PHYs strapped to MDIO addresses 8-12 */
+	ethphy8:  ethernet-phy@8  { reg = <8>;  };  /* WAN1 */
+	ethphy9:  ethernet-phy@9  { reg = <9>;  };  /* WAN2 */
+	ethphy10: ethernet-phy@10 { reg = <10>; };  /* LAN1 */
+	ethphy11: ethernet-phy@11 { reg = <11>; };  /* LAN2 */
+	ethphy12: ethernet-phy@12 { reg = <12>; };  /* LAN3 */
+	ethphy13: ethernet-phy@13 { reg = <13>; };  /* PSGMII calibration PHY */
 
-        /* WAN2 - physical WAN2 jack */
-        port@1 {
-            reg = <1>;
-            label = "wan2";
-            phy-handle = <&ethphy0>;
-            phy-mode = "psgmii";
-        };
+	/* QCA8337: downstream DSA switch at MDIO address 0x10 (16) */
+	qca8337: switch@10 {
+		compatible = "qca,qca8337";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x10>;
 
-        /* WAN1 - physical WAN1 jack */
-        port@2 {
-            reg = <2>;
-            label = "wan1";
-            phy-handle = <&ethphy1>;
-            phy-mode = "psgmii";
-        };
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
 
-        /* LAN ports 1-4 via QCA8075 */
-        port@3 {
-            reg = <3>;
-            label = "lan1";
-            phy-handle = <&ethphy2>;
-            phy-mode = "psgmii";
-        };
+			/* CPU port: upstream link back to ESS swport6 */
+			port@0 {
+				reg = <0>;
+				label = "cpu";
+				ethernet = <&swport6>;
+				phy-mode = "rgmii";
+				fixed-link {
+					speed = <1000>;
+					full-duplex;
+				};
+			};
 
-        port@4 {
-            reg = <4>;
-            label = "lan2";
-            phy-handle = <&ethphy3>;
-            phy-mode = "psgmii";
-        };
+			port@1 {
+				reg = <1>;
+				label = "lan4";
+				phy-mode = "internal";
+				phy-handle = <&qca8337_phy0>;
+			};
 
-        port@5 {
-            reg = <5>;
-            label = "lan3";
-            phy-handle = <&ethphy4>;
-            phy-mode = "psgmii";
-        };
+			port@2 {
+				reg = <2>;
+				label = "lan5";
+				phy-mode = "internal";
+				phy-handle = <&qca8337_phy1>;
+			};
 
-        /* LAN ports 5-8 via QCA8337 internal PHYs */
-        /* These are the remaining 4 LAN ports on the second switch */
-        port@6 {
-            reg = <6>;
-            label = "lan4";
-            phy-mode = "psgmii";
-        };
+			port@3 {
+				reg = <3>;
+				label = "lan6";
+				phy-mode = "internal";
+				phy-handle = <&qca8337_phy2>;
+			};
 
-        port@7 {
-            reg = <7>;
-            label = "lan5";
-            phy-mode = "psgmii";
-        };
+			port@4 {
+				reg = <4>;
+				label = "lan7";
+				phy-mode = "internal";
+				phy-handle = <&qca8337_phy3>;
+			};
 
-        port@8 {
-            reg = <8>;
-            label = "lan6";
-            phy-mode = "psgmii";
-        };
+			port@5 {
+				reg = <5>;
+				label = "lan8";
+				phy-mode = "internal";
+				phy-handle = <&qca8337_phy4>;
+			};
+		};
 
-        port@9 {
-            reg = <9>;
-            label = "lan7";
-            phy-mode = "psgmii";
-        };
-    };
+		mdio {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			qca8337_phy0: ethernet-phy@0 { reg = <0>; };
+			qca8337_phy1: ethernet-phy@1 { reg = <1>; };
+			qca8337_phy2: ethernet-phy@2 { reg = <2>; };
+			qca8337_phy3: ethernet-phy@3 { reg = <3>; };
+			qca8337_phy4: ethernet-phy@4 { reg = <4>; };
+		};
+	};
 };
 
-&mdio {
-    status = "okay";
+&switch {
+	status = "okay";
+	psgmii-ethphy = <&ethphy13>;  /* PSGMII calibration PHY */
 
-    ethernet-phy-package@8 {
-        /*
-         * QCA8075 PHYs are strapped to MDIO addresses 8-12
-         * on this board, NOT the upstream default of 0-4.
-         * Confirmed from manufacturer stock-fixed.dts.
-         */
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
 
-        ethphy8:  ethernet-phy@8  { reg = <8>;  };  /* WAN2 */
-        ethphy9:  ethernet-phy@9  { reg = <9>;  };  /* WAN1 */
-        ethphy10: ethernet-phy@10 { reg = <10>; };  /* LAN1 */
-        ethphy11: ethernet-phy@11 { reg = <11>; };  /* LAN2 */
-        ethphy12: ethernet-phy@12 { reg = <12>; };  /* LAN3 */
+		/* NOTE: No port@0 CPU port here — EDMA is the CPU port */
+		/delete-node/ port@0;
+		
+		swport1: port@1 {
+			reg = <1>;
+			label = "wan1";
+			phy-handle = <&ethphy8>;
+			phy-mode = "psgmii";
+			status = "okay";
+		};
 
-        /* PSGMII calibration PHY — base(8) + 5 = 13 */
-        ethphy13: ethernet-phy@13 { reg = <13>; };
-    };
+		swport2: port@2 {
+			reg = <2>;
+			label = "wan2";
+			phy-handle = <&ethphy9>;
+			phy-mode = "psgmii";
+			status = "okay";
+		};
+
+		swport3: port@3 {
+			reg = <3>;
+			label = "lan1";
+			phy-handle = <&ethphy10>;
+			phy-mode = "psgmii";
+			status = "okay";
+		};
+
+		swport4: port@4 {
+			reg = <4>;
+			label = "lan2";
+			phy-handle = <&ethphy11>;
+			phy-mode = "psgmii";
+			status = "okay";
+		};
+
+		swport5: port@5 {
+			reg = <5>;
+			label = "lan3";
+			phy-handle = <&ethphy12>;
+			phy-mode = "psgmii";
+			status = "okay";
+		};
+
+		/* Cascade port — fixed 1G RGMII link to QCA8337 port@0 */
+		swport6: port@6 {
+			reg = <6>;
+			label = "cascade";
+			phy-mode = "rgmii";
+			status = "okay";
+			fixed-link {
+				speed = <1000>;
+				full-duplex;
+			};
+		};
+	};
 };
 
 
@@ -381,6 +422,19 @@
 		gpios = <48 GPIO_ACTIVE_HIGH>;
 		output-high;
 		line-name = "usb-power-enable";
+	};
+	
+	mdio_pins: mdio_pinmux {
+		mux_1 {
+			pins = "gpio6";
+			function = "mdio0";
+			bias-bus-hold;
+		};
+		mux_2 {
+			pins = "gpio7";
+			function = "mdc";
+			bias-bus-hold;
+		};
 	};
 
 	/* pinmux / gpios */
