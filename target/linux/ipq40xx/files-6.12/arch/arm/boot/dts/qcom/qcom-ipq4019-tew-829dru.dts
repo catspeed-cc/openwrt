@@ -528,7 +528,8 @@ edma {
  Then OpenWRT handles the communication between wan1, lan, wan2 based on it's firewall rules, etc. with physical separation between the security concerns as expected for an SMB device.
  
  ### ADDRESS SPACE CONFLICTS ###
- 
+  NOTE: hardware addresses *MUST* match the mfr, other config - eg. daisy chaining - is optional, provided both switches support them (qcom-ipq4019.dtsi shows that both do)
+
  qcom-ipq4019.dtsi (upstream)			stock-fixed.dts (mfr)
  gmac: ethernet@c080000			->		edma@c080000				Delete upstream nodes, redefine as per mfr.
 																	In the case of upstream, this is "gmac" and no other gmac's are defined. In the case of mfr, this defines an edma-encapsulated gmac0-2
@@ -582,5 +583,14 @@ we could keep QCA8075 where it is, given mfr also places it at same hardware add
 
 - Keep mdio (QCA8075) at 90000 (hardware address matches upstream:mfr)
 - Redefine upstream switch@c000000 (QCA8337) at the correct hardware address from mfr (where is it?)
+
+Final result: eth1 { QCA8075 -> daisy chained -> QCA8337 }
+
+eth1 is "cpu" and QCA8075/mdio is connected to it, then QCA8337 at corrected hardware address daisy chains off QCA8075/phy5
+the entire concoction is known as gmac1/eth1/lan and provides all 8 LAN ports while gmac0/gmac2 provide wan1/wan2
+
+Slight difference from mfr but should work given the exact same switches have been used in this configuration before. We only have to find and correct QCA8337 hardware address.
+
+I am cat. Switches are nothing.
 
 */
