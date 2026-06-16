@@ -61,9 +61,9 @@
 };
 
 &mdio {
-    status = "okay";
-    pinctrl-0 = <&mdio_pins>;
-    pinctrl-names = "default";
+	status = "okay";
+	pinctrl-0 = <&mdio_pins>;
+	pinctrl-names = "default";
 	
 	/*
 	 * DELETE the upstream qca8075-package@0 node.
@@ -119,9 +119,8 @@
 			port@0 {
 				reg = <0>;
 				label = "cpu";
-				ethernet = <&gmac>;
+				ethernet = <&swport5>;
 				phy-mode = "rgmii";
-				tag-protocol = "none";
 				fixed-link {
 					speed = <1000>;
 					full-duplex;
@@ -162,6 +161,7 @@
 				phy-mode = "internal";
 				phy-handle = <&qca8337_phy4>;
 			};
+			
 		};
 
 		/*
@@ -183,190 +183,193 @@
 };
 
 &switch {
-    status = "okay";
+	status = "okay";
 
 	mdio-bus = <&mdio>;
 	//qca,mdio = <&mdio>; //alternative if above not work
 
-    /*
-     * psgmii-ethphy points to the last PHY in the QCA8075 package (ethphy12).
-     * This is the combo port and serves as the PSGMII calibration PHY.
-     * The qca8075-package driver uses this for SerDes bring-up sequencing.
-     */
-    psgmii-ethphy = <&ethphy12>;
+	/*
+	 * psgmii-ethphy points to the last PHY in the QCA8075 package (ethphy12).
+	 * This is the combo port and serves as the PSGMII calibration PHY.
+	 * The qca8075-package driver uses this for SerDes bring-up sequencing.
+	 */
+	psgmii-ethphy = <&ethphy12>;
 
-    ports {
-        #address-cells = <1>;
-        #size-cells = <0>;
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
 
-        swport1: port@1 {
-            reg = <1>;
-            label = "wan1";
-            phy-handle = <&ethphy8>;
-            phy-mode = "psgmii";
-            status = "okay";
-        };
+		swport1: port@1 {
+			reg = <1>;
+			label = "wan1";
+			phy-handle = <&ethphy8>;
+			phy-mode = "psgmii";
+			status = "okay";
+		};
 
-        swport2: port@2 {
-            reg = <2>;
-            label = "wan2";
-            phy-handle = <&ethphy9>;
-            phy-mode = "psgmii";
-            status = "okay";
-        };
+		swport2: port@2 {
+			reg = <2>;
+			label = "wan2";
+			phy-handle = <&ethphy9>;
+			phy-mode = "psgmii";
+			status = "okay";
+		};
 
-        swport3: port@3 {
-            reg = <3>;
-            label = "lan1";
-            phy-handle = <&ethphy10>;
-            phy-mode = "psgmii";
-            status = "okay";
-        };
+		swport3: port@3 {
+			reg = <3>;
+			label = "lan1";
+			phy-handle = <&ethphy10>;
+			phy-mode = "psgmii";
+			status = "okay";
+		};
 
-        swport4: port@4 {
-            reg = <4>;
-            label = "lan2";
-            phy-handle = <&ethphy11>;
-            phy-mode = "psgmii";
-            status = "okay";
-        };
+		swport4: port@4 {
+			reg = <4>;
+			label = "lan2";
+			phy-handle = <&ethphy11>;
+			phy-mode = "psgmii";
+			status = "okay";
+		};
 
-        swport5: port@5 {
-            reg = <5>;
-            label = "lan3";
-            phy-handle = <&ethphy12>;
-            phy-mode = "psgmii";
-            status = "okay";
-        };
-
-        /*
-         * NO port@6 — valid ESS indices are 0-5 only (num_ports=6).
-         * QCA8337 is NOT cascaded here. It lives on gmac1 independently.
-         */
-    };
+		swport5: port@5 {
+			reg = <5>;
+			label = "cpu";
+			phy-mode = "rgmii";
+			status = "okay";
+			fixed-link {
+				speed = <1000>;
+				full-duplex;
+			};
+		};
+		
+		/*
+		 * NO port@6 — valid ESS indices are 0-5 only (num_ports=6).
+		 * QCA8337 is NOT cascaded here. It lives on gmac1 independently.
+		 */
+	};
 };
 
 
 &blsp1_spi1 {
 
-    /* 8MB FLASH CHIP (Macronix MX25L6433F SPI NOR 8MB) */
-    status = "okay";
+	/* 8MB FLASH CHIP (Macronix MX25L6433F SPI NOR 8MB) */
+	status = "okay";
 
-    pinctrl-0 = <&spi_0_pinmux>;
-    pinctrl-names = "default";
+	pinctrl-0 = <&spi_0_pinmux>;
+	pinctrl-names = "default";
 
-    cs-gpios = <&tlmm 12 GPIO_ACTIVE_HIGH>;
+	cs-gpios = <&tlmm 12 GPIO_ACTIVE_HIGH>;
 
-    flash: flash@0 {
+	flash: flash@0 {
 
-        #address-cells = <1>;
-        #size-cells = <1>;
+		#address-cells = <1>;
+		#size-cells = <1>;
 
-        compatible = "mx25l6405d", "jedec,spi-nor";
+		compatible = "mx25l6405d", "jedec,spi-nor";
 
-        reg = <0>;
-        spi-max-frequency = <24000000>;
+		reg = <0>;
+		spi-max-frequency = <24000000>;
 
-        partitions {
-            compatible = "fixed-partitions";
-            #address-cells = <1>;
-            #size-cells = <1>;
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
 
-            sbl1_part: partition@0 {
-                label = "SBL1";
-                reg = <0x0 0x40000>;
-                read-only;
-            };
+			sbl1_part: partition@0 {
+				label = "SBL1";
+				reg = <0x0 0x40000>;
+				read-only;
+			};
 
-            mibib_part: partition@40000 {
-                label = "MIBIB";
-                reg = <0x40000 0x20000>;
-                read-only;
-            };
+			mibib_part: partition@40000 {
+				label = "MIBIB";
+				reg = <0x40000 0x20000>;
+				read-only;
+			};
 
-            qsee_part: partition@60000 {
-                label = "QSEE";
-                reg = <0x60000 0x60000>;
-                read-only;
-            };
+			qsee_part: partition@60000 {
+				label = "QSEE";
+				reg = <0x60000 0x60000>;
+				read-only;
+			};
 
-            cdt_part: partition@c0000 {
-                label = "CDT";
-                reg = <0xc0000 0x10000>;
-                read-only;
-            };
+			cdt_part: partition@c0000 {
+				label = "CDT";
+				reg = <0xc0000 0x10000>;
+				read-only;
+			};
 
-            ddrparams_part: partition@d0000 {
-                label = "DDRPARAMS";
-                reg = <0xd0000 0x10000>;
-                read-only;
-            };
+			ddrparams_part: partition@d0000 {
+				label = "DDRPARAMS";
+				reg = <0xd0000 0x10000>;
+				read-only;
+			};
 
-            appsblenv_part: partition@e0000 {
-                label = "APPSBLENV";
-                reg = <0xe0000 0x10000>;
-            };
+			appsblenv_part: partition@e0000 {
+				label = "APPSBLENV";
+				reg = <0xe0000 0x10000>;
+			};
 
-            appsbl_part: partition@f0000 {
-                label = "APPSBL";
-                reg = <0xf0000 0x80000>;
-                read-only;
-            };
+			appsbl_part: partition@f0000 {
+				label = "APPSBL";
+				reg = <0xf0000 0x80000>;
+				read-only;
+			};
 
-            art_part: partition@170000 {
-                label = "ART";
-                reg = <0x170000 0x10000>;
-                read-only;
-            };
-        };
-    };
+			art_part: partition@170000 {
+				label = "ART";
+				reg = <0x170000 0x10000>;
+				read-only;
+			};
+		};
+	};
 };
 /* end of &blsp1_spi1 (Macronix MX25L6433F SPI NOR 8MB) */
 
 /* start of &qpic_bam (for Micron MT29F1G08ABADA NAND 128MB) */
 &qpic_bam {
-    status = "okay";
+	status = "okay";
 };
 /* end of &qpic_bam (Micron MT29F1G08ABADA NAND 128MB) */
 /* start of &nand (Micron MT29F1G08ABADA NAND 128MB) */
 &nand {
-    status = "disabled";
+	status = "disabled";
 	
 	/delete-property/ pinctrl-0;
 	/delete-property/ pinctrl-names;
 
-    nand@0 {
-        reg = <0>;
+	nand@0 {
+		reg = <0>;
 
-        /* Micron MT29F1G08ABADA: 128MB, 8-bit bus, 4-bit ECC */
-        nand-ecc-strength = <4>;
-        nand-ecc-step-size = <512>;
-        nand-bus-width = <8>;
+		/* Micron MT29F1G08ABADA: 128MB, 8-bit bus, 4-bit ECC */
+		nand-ecc-strength = <4>;
+		nand-ecc-step-size = <512>;
+		nand-bus-width = <8>;
 
-        partitions {
-            compatible = "fixed-partitions";
-            #address-cells = <1>;
-            #size-cells = <1>;
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
 
-            /* Primary boot image: kernel + ubi_rootfs UBI volumes */
-            rootfs_part: partition@0 {
-                label = "rootfs";
-                reg = <0x00000000 0x03000000>; /* 48MB */
-            };
+			/* Primary boot image: kernel + ubi_rootfs UBI volumes */
+			rootfs_part: partition@0 {
+				label = "rootfs";
+				reg = <0x00000000 0x03000000>; /* 48MB */
+			};
 
-            /* Secondary/failsafe boot image: kernel + ubi_rootfs UBI volumes */
-            rootfs_1_part: partition@3000000 {
-                label = "rootfs_1";
-                reg = <0x03000000 0x03000000>; /* 48MB */
-            };
+			/* Secondary/failsafe boot image: kernel + ubi_rootfs UBI volumes */
+			rootfs_1_part: partition@3000000 {
+				label = "rootfs_1";
+				reg = <0x03000000 0x03000000>; /* 48MB */
+			};
 
-            /* Persistent config overlay: rootfs_data UBI volume */
-            overlay_part: partition@6000000 {
-                label = "overlay";
-                reg = <0x06000000 0x02000000>; /* 32MB */
-            };
-        };
-    };
+			/* Persistent config overlay: rootfs_data UBI volume */
+			overlay_part: partition@6000000 {
+				label = "overlay";
+				reg = <0x06000000 0x02000000>; /* 32MB */
+			};
+		};
+	};
 };
 /* end of &nand (Micron MT29F1G08ABADA NAND 128MB) */
 
@@ -535,65 +538,65 @@
 
 /* QCA4019 2GHZ */
 &wifi0 {
-    status = "okay";
-    qcom,ath10k-calibration-variant = "TEW-829DRU-2G";
-    nvmem-cells = <&caldata_art_1000>;
-    nvmem-cell-names = "pre-calibration";
+	status = "okay";
+	qcom,ath10k-calibration-variant = "TEW-829DRU-2G";
+	nvmem-cells = <&caldata_art_1000>;
+	nvmem-cell-names = "pre-calibration";
 };
 
 /* QCA4019 5GHZ */
 &wifi1 {
-    status = "okay";
-    qcom,ath10k-calibration-variant = "TEW-829DRU-5G";
-    nvmem-cells = <&caldata_art_5000>;
-    nvmem-cell-names = "pre-calibration";
+	status = "okay";
+	qcom,ath10k-calibration-variant = "TEW-829DRU-5G";
+	nvmem-cells = <&caldata_art_5000>;
+	nvmem-cell-names = "pre-calibration";
 };
 
 /* QCA9984 5GHZ */
 &pcie0 {
-    status = "okay";
+	status = "okay";
 
-    pcie_bridge0: pcie@0 {
-        device_type = "pci";
-        reg = <0x0 0x0 0x0 0x0 0x0>;
-        bus-range = <0x01 0xff>;
-        #address-cells = <3>;
-        #size-cells = <2>;
-        ranges;
+	pcie_bridge0: pcie@0 {
+		device_type = "pci";
+		reg = <0x0 0x0 0x0 0x0 0x0>;
+		bus-range = <0x01 0xff>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+		ranges;
 
-        wifi@0,0 {
-            compatible = "qcom,ath10k";
-            reg = <0x00010000 0 0 0 0>;
-            nvmem-cells = <&caldata_art_9000>;
-            nvmem-cell-names = "pre-calibration";
-        };
-    };
+		wifi@0,0 {
+			compatible = "qcom,ath10k";
+			reg = <0x00010000 0 0 0 0>;
+			nvmem-cells = <&caldata_art_9000>;
+			nvmem-cell-names = "pre-calibration";
+		};
+	};
 };
 
 /* ART data / caldata for wifi */
 &art_part {
-    compatible = "nvmem-cells";
-    #address-cells = <1>;
-    #size-cells = <1>;
+	compatible = "nvmem-cells";
+	#address-cells = <1>;
+	#size-cells = <1>;
 
-    macaddr_art_0: macaddr@0 {
-        reg = <0x0 0x6>;
-    };
+	macaddr_art_0: macaddr@0 {
+		reg = <0x0 0x6>;
+	};
 
-    /* QCA4019 2.4GHz - AHB radio wifi0 */
-    caldata_art_1000: caldata@1000 {
-        reg = <0x1000 0x2f20>;
-    };
+	/* QCA4019 2.4GHz - AHB radio wifi0 */
+	caldata_art_1000: caldata@1000 {
+		reg = <0x1000 0x2f20>;
+	};
 
-    /* QCA4019 5GHz - AHB radio wifi1 */
-    caldata_art_5000: caldata@5000 {
-        reg = <0x5000 0x2f20>;
-    };
+	/* QCA4019 5GHz - AHB radio wifi1 */
+	caldata_art_5000: caldata@5000 {
+		reg = <0x5000 0x2f20>;
+	};
 
-    /* QCA9984 5GHz - PCIe radio */
-    caldata_art_9000: caldata@9000 {
-        reg = <0x9000 0x2f20>;
-    };
+	/* QCA9984 5GHz - PCIe radio */
+	caldata_art_9000: caldata@9000 {
+		reg = <0x9000 0x2f20>;
+	};
 };
 
 
