@@ -126,19 +126,46 @@
 /* end of root block */
 
 &mdio {
-	status = "okay";
-	pinctrl-0 = <&mdio_pins>;
-	pinctrl-names = "default";
+    status = "okay";
+    pinctrl-0 = <&mdio_pins>;
+    pinctrl-names = "default";
+	
+	/*
+	 * DELETE the upstream qca8075-package@0 node.
+	 * Upstream qcom-ipq4019.dtsi defines the package at reg=<0> (addresses 0-4).
+	 * Our board hardware-straps QCA8075 to MDIO addresses 8-12.
+	 * Without this delete, the driver probes addresses 0-5 and panics on missing addr 5.
+	 */
+	/delete-node/ ethernet-phy-package@0;
 
-	/* QCA8075: 5 PHYs strapped to MDIO addresses 8-12 */
-	ethphy8:  ethernet-phy@8  { reg = <8>;  };  /* WAN1 */
-	ethphy9:  ethernet-phy@9  { reg = <9>;  };  /* WAN2 */
-	ethphy10: ethernet-phy@10 { reg = <10>; };  /* LAN1 */
-	ethphy11: ethernet-phy@11 { reg = <11>; };  /* LAN2 */
-	ethphy12: ethernet-phy@12 { reg = <12>; };  /* LAN3 */
-	ethphy13: ethernet-phy@13 { reg = <13>; };  /* PSGMII calibration PHY */
+	/*
+	 * QCA8075: 5-port PHY package.
+	 * Board hardware-straps the MDIO base address to 8.
+	 * PHYs at addresses 8-12, PSGMII calibration PHY implicit at base+5=13.
+	 * The qcom,qca8075-package driver handles PSGMII bring-up internally.
+	 * tx-drive-strength-milliwatt = 300 per IPQ4019 reference design spec.
+	 */
+	ethernet-phy-package@8 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "qcom,qca8075-package";
+		reg = <8>;
+		qcom,tx-drive-strength-milliwatt = <300>;
 
-	/* QCA8337: downstream DSA switch at MDIO address 0x10 (16) */
+		ethphy8:  ethernet-phy@8  { reg = <8>;  };  /* WAN1 */
+		ethphy9:  ethernet-phy@9  { reg = <9>;  };  /* WAN2 */
+		ethphy10: ethernet-phy@10 { reg = <10>; };  /* LAN1 */
+		ethphy11: ethernet-phy@11 { reg = <11>; };  /* LAN2 */
+		ethphy12: ethernet-phy@12 { reg = <12>; };  /* LAN3 / combo */
+	};
+
+	/*
+	 * QCA8337: standalone DSA switch.
+	 * Connected via RGMII fixed-link DIRECTLY to gmac1 (eth1).
+	 * This is NOT cascaded through the ESS — it is a sibling switch
+	 * on a completely independent MAC. MDIO address 0x10 on the
+	 * shared MDIO bus for management access only.
+	 */
 	qca8337: switch@10 {
 		compatible = "qca,qca8337";
 		#address-cells = <1>;
@@ -149,11 +176,15 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			/* CPU port: upstream link back to ESS swport6 */
+			/*
+			 * CPU port: RGMII fixed-link to gmac1.
+			 * gmac1 is the SoC's second GMAC, independent of the ESS.
+			 * 1000 Mbps full-duplex — no autoneg on a fixed MAC-to-switch link.
+			 */
 			port@0 {
 				reg = <0>;
 				label = "cpu";
-				ethernet = <&swport6>;
+				ethernet = <&gmac1>;
 				phy-mode = "rgmii";
 				fixed-link {
 					speed = <1000>;
@@ -197,6 +228,11 @@
 			};
 		};
 
+		/*
+		 * QCA8337 internal MDIO bus.
+		 * PHY addresses 0-4 are LOCAL to the switch — do not confuse
+		 * with the top-level MDIO bus where QCA8075 lives at 8-12.
+		 */
 		mdio {
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -211,68 +247,74 @@
 };
 
 &switch {
-	status = "okay";
-	psgmii-ethphy = <&ethphy13>;  /* PSGMII calibration PHY */
+    status = "okay";
 
-	ports {
-		#address-cells = <1>;
-		#size-cells = <0>;
+	mdio-bus = <&mdio>;
+	//qca,mdio = <&mdio>; //alternative if above not work
 
-		/* NOTE: No port@0 CPU port here — EDMA is the CPU port */
-		/delete-node/ port@0;
-		
-		swport1: port@1 {
-			reg = <1>;
-			label = "wan1";
-			phy-handle = <&ethphy8>;
-			phy-mode = "psgmii";
-			status = "okay";
-		};
+    /*
+     * psgmii-ethphy points to the last PHY in the QCA8075 package (ethphy12).
+     * This is the combo port and serves as the PSGMII calibration PHY.
+     * The qca8075-package driver uses this for SerDes bring-up sequencing.
+     */
+    psgmii-ethphy = <&ethphy12>;
 
-		swport2: port@2 {
-			reg = <2>;
-			label = "wan2";
-			phy-handle = <&ethphy9>;
-			phy-mode = "psgmii";
-			status = "okay";
-		};
+    ports {
+        #address-cells = <1>;
+        #size-cells = <0>;
 
-		swport3: port@3 {
-			reg = <3>;
-			label = "lan1";
-			phy-handle = <&ethphy10>;
-			phy-mode = "psgmii";
-			status = "okay";
-		};
+        /*
+         * Delete any upstream-injected CPU port@0.
+         * The EDMA engine is the implicit CPU-side consumer on IPQ4019 ESS.
+         * It does not need an explicit DTS port node.
+         */
+        /delete-node/ port@0;
 
-		swport4: port@4 {
-			reg = <4>;
-			label = "lan2";
-			phy-handle = <&ethphy11>;
-			phy-mode = "psgmii";
-			status = "okay";
-		};
+        swport1: port@1 {
+            reg = <1>;
+            label = "wan1";
+            phy-handle = <&ethphy8>;
+            phy-mode = "psgmii";
+            status = "okay";
+        };
 
-		swport5: port@5 {
-			reg = <5>;
-			label = "lan3";
-			phy-handle = <&ethphy12>;
-			phy-mode = "psgmii";
-			status = "okay";
-		};
+        swport2: port@2 {
+            reg = <2>;
+            label = "wan2";
+            phy-handle = <&ethphy9>;
+            phy-mode = "psgmii";
+            status = "okay";
+        };
 
-		/* Cascade port — fixed 1G RGMII link to QCA8337 port@0 */
-		swport6: port@6 {
-			reg = <6>;
-			label = "cascade";
-			phy-mode = "rgmii";
-			status = "okay";
-			fixed-link {
-				speed = <1000>;
-				full-duplex;
-			};
-		};
-	};
+        swport3: port@3 {
+            reg = <3>;
+            label = "lan1";
+            phy-handle = <&ethphy10>;
+            phy-mode = "psgmii";
+            status = "okay";
+        };
+
+        swport4: port@4 {
+            reg = <4>;
+            label = "lan2";
+            phy-handle = <&ethphy11>;
+            phy-mode = "psgmii";
+            status = "okay";
+        };
+
+        swport5: port@5 {
+            reg = <5>;
+            label = "lan3";
+            phy-handle = <&ethphy12>;
+            phy-mode = "psgmii";
+            status = "okay";
+        };
+
+        /*
+         * NO port@6 — valid ESS indices are 0-5 only (num_ports=6).
+         * QCA8337 is NOT cascaded here. It lives on gmac1 independently.
+         */
+    };
 };
 
 
@@ -425,15 +467,17 @@
 	};
 	
 	mdio_pins: mdio_pinmux {
-		mux_1 {
-			pins = "gpio6";
-			function = "mdio0";
-			bias-bus-hold;
+		pinmux_1 {
+			pins = "gpio53";
+			function = "mdio";
 		};
-		mux_2 {
-			pins = "gpio7";
+		pinmux_2 {
+			pins = "gpio52";
 			function = "mdc";
-			bias-bus-hold;
+		};
+		pinconf {
+			pins = "gpio52", "gpio53";
+			bias-pull-up;
 		};
 	};
 
