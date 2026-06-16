@@ -23,6 +23,9 @@
 
 #include "qcom-ipq4019-ap.dk04.1.dtsi"
 
+/* Delete the upstream single gmac node */
+/delete-node/ &gmac;
+
 / {
 
 	model = "TRENDnet TEW-829DRU";
@@ -46,10 +49,8 @@
 		mtd10 = &overlay_part;
 	};
 	
-	/* Delete the upstream single gmac node */
-	/delete-node/ &gmac;
+	soc {
 	
-	&soc {
 		edma: ethernet@c080000 {
 			compatible = "qcom,ess-edma";
 			reg = <0xc080000 0x8000>;
@@ -126,7 +127,9 @@
 
 &switch {
     status = "okay";
-
+	
+	psgmii-ethphy = <&ethphy13>;
+	
     /* Override: connect CPU port to edma, not upstream gmac */
     ports {
         port@0 {
@@ -213,32 +216,21 @@
 &mdio {
     status = "okay";
 
-    ethernet-phy-package@0 {
+    ethernet-phy-package@8 {
         /*
          * QCA8075 PHYs are strapped to MDIO addresses 8-12
          * on this board, NOT the upstream default of 0-4.
          * Confirmed from manufacturer stock-fixed.dts.
          */
 
-        ethphy0: ethernet-phy@0 {
-            reg = <8>;   /* WAN2 */
-        };
+        ethphy8:  ethernet-phy@8  { reg = <8>;  };  /* WAN2 */
+        ethphy9:  ethernet-phy@9  { reg = <9>;  };  /* WAN1 */
+        ethphy10: ethernet-phy@10 { reg = <10>; };  /* LAN1 */
+        ethphy11: ethernet-phy@11 { reg = <11>; };  /* LAN2 */
+        ethphy12: ethernet-phy@12 { reg = <12>; };  /* LAN3 */
 
-        ethphy1: ethernet-phy@1 {
-            reg = <9>;   /* WAN1 */
-        };
-
-        ethphy2: ethernet-phy@2 {
-            reg = <10>;  /* LAN1 */
-        };
-
-        ethphy3: ethernet-phy@3 {
-            reg = <11>;  /* LAN2 */
-        };
-
-        ethphy4: ethernet-phy@4 {
-            reg = <12>;  /* LAN3 */
-        };
+        /* PSGMII calibration PHY — base(8) + 5 = 13 */
+        ethphy13: ethernet-phy@13 { reg = <13>; };
     };
 };
 
