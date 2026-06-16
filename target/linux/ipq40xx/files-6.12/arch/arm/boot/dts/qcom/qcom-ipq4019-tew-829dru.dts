@@ -102,10 +102,12 @@
 	 * shared MDIO bus for management access only.
 	 */
 	qca8337: switch@10 {
-		compatible = "qca,ipq4019-qca8337n";
+		compatible = "qca,qca8337";
 		#address-cells = <1>;
 		#size-cells = <0>;
 		reg = <0x10>;
+
+		dsa,member = <0 1>;
 
 		ports {
 			#address-cells = <1>;
@@ -116,11 +118,11 @@
 			 * gmac1 is the SoC's second GMAC, independent of the ESS.
 			 * 1000 Mbps full-duplex — no autoneg on a fixed MAC-to-switch link.
 			 */
-			port@0 {
+			extport0: port@0 {
 				reg = <0>;
 				label = "cpu";
-				ethernet = <&swport5>;
 				phy-mode = "rgmii";
+				ethernet = <&swport5>;
 				fixed-link {
 					speed = <1000>;
 					full-duplex;
@@ -184,7 +186,9 @@
 
 &switch {
 	status = "okay";
-
+	
+	dsa,member = <0 0>;
+	
 	mdio-bus = <&mdio>;
 	//qca,mdio = <&mdio>; //alternative if above not work
 
@@ -233,10 +237,11 @@
 
 		swport5: port@5 {
 			reg = <5>;
-			label = "cpu";
+			label = "dsa";
 			phy-mode = "rgmii";
 			status = "okay";
-			/delete-property/ phy-handle;    /* ethphy4 was deleted, kill the dangling ref */
+			/delete-property/ phy-handle;
+
 			fixed-link {
 				speed = <1000>;
 				full-duplex;
@@ -245,7 +250,7 @@
 		
 		/*
 		 * NO port@6 — valid ESS indices are 0-5 only (num_ports=6).
-		 * QCA8337 is NOT cascaded here. It lives on gmac1 independently.
+		 * QCA8337 is NOT cascaded here. (?It lives on gmac1 independently?)
 		 */
 	};
 };
