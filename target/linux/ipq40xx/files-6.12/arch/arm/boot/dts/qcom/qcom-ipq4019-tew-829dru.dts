@@ -29,7 +29,7 @@
 	compatible = "trendnet,tew-829dru", "qcom,ipq4019-dk04.1-c1", "qcom,ipq4019";
 	
 	chosen {
-		bootargs = "console=ttyMSM0,115200n8 rootfstype=squashfs,jffs2 iommu.passthrough=1 earlyprintk";
+		bootargs = "console=ttyMSM0,115200n8 rootfstype=squashfs,jffs2 iommu.passthrough=1";
 	};
 	
 	aliases {
@@ -50,6 +50,8 @@
 
 &gmac {
 	/* ipqess upstream node — flat, no gmac children */
+	status = "okay";
+	
 	/* All vendor-only props stripped; driver ignores them */
 	phy-mode = "internal";
 	fixed-link {
