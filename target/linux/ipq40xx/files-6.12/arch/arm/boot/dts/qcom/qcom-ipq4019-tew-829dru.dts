@@ -52,7 +52,8 @@
 	soc {
 	
 		edma: ethernet@c080000 {
-			compatible = "qcom,ess-edma";
+			compatible = "qcom,ipq4019-ess-edma";
+			phy-mode = "internal";
 			reg = <0xc080000 0x8000>;
 			qcom,page-mode = <0>;
 			qcom,rx_head_buf_size = <0x604>;
