@@ -46,10 +46,201 @@
 		mtd10 = &overlay_part;
 	};
 	
+	/* Delete the upstream single gmac node */
+	/delete-node/ &gmac;
+	
+	&soc {
+		edma: ethernet@c080000 {
+			compatible = "qcom,ess-edma";
+			reg = <0xc080000 0x8000>;
+			qcom,page-mode = <0>;
+			qcom,rx_head_buf_size = <0x604>;
+			qcom,num_gmac = <3>;
+			qcom,mdio_supported;
+			resets = <&gcc ESS_RESET>;
+			reset-names = "ess";
+			clocks = <&gcc GCC_ESS_CLK>;
+			clock-names = "ess";
+			interrupts = <GIC_SPI  65 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI  66 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI  67 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI  68 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI  69 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI  70 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI  71 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI  72 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI  73 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI  74 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI  75 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI  76 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI  77 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI  78 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI  79 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI  80 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI 240 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI 241 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI 242 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI 243 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI 244 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI 245 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI 246 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI 247 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI 248 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI 249 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI 250 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI 251 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI 252 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI 253 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI 254 IRQ_TYPE_EDGE_RISING>,
+						 <GIC_SPI 255 IRQ_TYPE_EDGE_RISING>;
+
+			gmac0: gmac0 {
+				/* WAN2 - switch port 2 - QCA8075 PHY MDIO addr 9 */
+				local-mac-address = [00 00 00 00 00 00];
+				qcom,phy_mdio_addr = <9>;
+				qcom,poll_required = <1>;
+				qcom,forced_speed = <1000>;
+				qcom,forced_duplex = <1>;
+				vlan_tag = <2 0x04>;
+			};
+
+			gmac1: gmac1 {
+				/* LAN - switch ports 3,4,5 - all 8 LAN ports via both switches */
+				local-mac-address = [00 00 00 00 00 00];
+				vlan_tag = <1 0x38>;
+			};
+
+			gmac2: gmac2 {
+				/* WAN1 - switch port 1 - QCA8075 PHY MDIO addr 8 */
+				local-mac-address = [00 00 00 00 00 00];
+				qcom,phy_mdio_addr = <8>;
+				qcom,poll_required = <1>;
+				qcom,forced_speed = <1000>;
+				qcom,forced_duplex = <1>;
+				vlan_tag = <3 0x02>;
+			};
+		};
+	};
 };
 /* end of root block */
 
+&switch {
+    status = "okay";
 
+    /* Override: connect CPU port to edma, not upstream gmac */
+    ports {
+        port@0 {
+            /* CPU port - connects to gmac1/eth1 for LAN */
+            reg = <0>;
+            label = "cpu";
+            ethernet = <&gmac1>;
+            phy-mode = "internal";
+
+            fixed-link {
+                speed = <1000>;
+                full-duplex;
+                pause;
+                asym-pause;
+            };
+        };
+
+        /* WAN2 - physical WAN2 jack */
+        port@1 {
+            reg = <1>;
+            label = "wan2";
+            phy-handle = <&ethphy0>;
+            phy-mode = "psgmii";
+        };
+
+        /* WAN1 - physical WAN1 jack */
+        port@2 {
+            reg = <2>;
+            label = "wan1";
+            phy-handle = <&ethphy1>;
+            phy-mode = "psgmii";
+        };
+
+        /* LAN ports 1-4 via QCA8075 */
+        port@3 {
+            reg = <3>;
+            label = "lan1";
+            phy-handle = <&ethphy2>;
+            phy-mode = "psgmii";
+        };
+
+        port@4 {
+            reg = <4>;
+            label = "lan2";
+            phy-handle = <&ethphy3>;
+            phy-mode = "psgmii";
+        };
+
+        port@5 {
+            reg = <5>;
+            label = "lan3";
+            phy-handle = <&ethphy4>;
+            phy-mode = "psgmii";
+        };
+
+        /* LAN ports 5-8 via QCA8337 internal PHYs */
+        /* These are the remaining 4 LAN ports on the second switch */
+        port@6 {
+            reg = <6>;
+            label = "lan4";
+            phy-mode = "psgmii";
+        };
+
+        port@7 {
+            reg = <7>;
+            label = "lan5";
+            phy-mode = "psgmii";
+        };
+
+        port@8 {
+            reg = <8>;
+            label = "lan6";
+            phy-mode = "psgmii";
+        };
+
+        port@9 {
+            reg = <9>;
+            label = "lan7";
+            phy-mode = "psgmii";
+        };
+    };
+};
+
+&mdio {
+    status = "okay";
+
+    ethernet-phy-package@0 {
+        /*
+         * QCA8075 PHYs are strapped to MDIO addresses 8-12
+         * on this board, NOT the upstream default of 0-4.
+         * Confirmed from manufacturer stock-fixed.dts.
+         */
+
+        ethphy0: ethernet-phy@0 {
+            reg = <8>;   /* WAN2 */
+        };
+
+        ethphy1: ethernet-phy@1 {
+            reg = <9>;   /* WAN1 */
+        };
+
+        ethphy2: ethernet-phy@2 {
+            reg = <10>;  /* LAN1 */
+        };
+
+        ethphy3: ethernet-phy@3 {
+            reg = <11>;  /* LAN2 */
+        };
+
+        ethphy4: ethernet-phy@4 {
+            reg = <12>;  /* LAN3 */
+        };
+    };
+};
 
 
 &blsp1_spi1 {
@@ -399,206 +590,27 @@
 
 
 
-/* 
- * CRITICAL FIX: Explicitly define gmac0 and gmac1 inside &edma 
- * because the base dtsi in your kernel tree lacks the global labels.
- *
- * human note: the above AI explanation seems hallucinatory and wrong.
- *
- */
- /* disabled temporarily
-&gmac {
-	status = "okay";
-
-	// GMAC0: SGMII -> QCA8337 (Switch 0)
-	gmac0: ethernet@98000 {
-		status = "okay";
-		phy-mode = "sgmii";
-		qcom,id = <1>;
-		nvmem-cells = <&macaddr_art_0>;
-		nvmem-cell-names = "mac-address";
-		fixed-link { speed = <1000>; full-duplex; pause; };
-	};
-
-	// GMAC1: RGMII -> QCA8075 (Switch 1)
-	gmac1: ethernet@99000 {
-		status = "okay";
-		phy-mode = "rgmii";
-		qcom,id = <2>;
-		tx-internal-delay-ps = <1000>;
-		rx-internal-delay-ps = <1000>;
-		fixed-link { speed = <1000>; full-duplex; };
-	};
-};
-/* disabled temporarily
-
-/*
-
-
-*THINKING HARD*
-
-8 LAN + 2 WAN (DSA, two switches QCA8337, QCA8075)
-This is definitely wrong, the manufacturer specifies gmac0, gmac1, gmac2 none of which are nested under eachother.
-Unsure as to their role but these are eth0-2
-QCA8075 being rgmii and QCA8337 being sgmii is confirmed, I know that.
-Manufacturer shows one of the GMAC with minimal config, only a mac of all 0's and a vlan_tag.
-The two switches are possibly GMAC0 and GMAC2 due to the presence of more configuration on two of the three gmac in manufacturer config.
-This leaves me the question, WTF is gmac1 for?
-Who cares. We need to replicate the manufacturer. They have gmac0, gmac1, gmac2 inside of an edma node. I don't know why.
-Do we just define gmac0, gmac1, gmac2 outside at top level, or do they need to be nested under edma node?
-Also one switch is "switch" and the other is "mdio". They both have 4 phy's in the manufacturer DTS. 4+4 = 8 - is that our 8 LAN? Where are our WAN? Does that mean our WAN are the gmac0 and gmac2? What is gmac1 then?
-Either gmac0 and gmac2 are switches, or they are WAN ports, or something.
-Although other routers have wan/wan6 in openwrt showing on the same eth device (in the AC1750 case, eth0.2)
-If wan1 and wan 2 are one device, this leads me to believe the other device, is the SWITCH?
-So in my case, wan1 and wan2 (its dual wan) would be on one eth?
-Or eth0 wan 1 and eth2 wan2 ? <--- this...?
-Then what eth1 ? <--- soooo....? (remember minimal config, vlan tag differs from the others)
-THE SWITCHES? BOTH SWITCHES ON ETH1? ETH0 = WAN1 and ETH2 = WAN2? <--- it must be,... does it sound right?
-
-
-** My best guess **
-qcom-ipq4019.dtsi has 5 ports per switch, daisy chained(?) - as per the manufacturer config they have 4 per switch. qcom-ipq4019.dtsi ain't us. We must emulate manufacturer here, switch config highly custom.
-
-Wans being physical ports and not on switches is what I would do, and then have LANs on switches. Explains why manufacturer has 4 ports per switch in their config (8 LAN ports). 
-Making gmac0/gmac2 aka eth0/eth2 the wan ports, leaving gmac1 aka eth1 for the two switches (QCA8337, QCA8075).
-
-- eth0/gmac0 - wan 1 (physical, explains added config)
-- eth1/gmac1 - QCA8337, QCA8075 (virtual-ish? explains less config? patches the two switches together, enables patching switches to wan 1 or wan 2)
-- eth2/gmac2 - wan 2 (physical, explains added config)
-
-I think this is it. It kinda makes sense. Even the config in the DTS, eth1 being minimal vs eth0 and eth2 being more config - speed, duplex, poll required, etc.
-
-OpenWRT then takes information coming/going to/from wan1/lan1-8/wan2 aka eth0/eth1/eth2 aka gmac0/gmac1/gmac2 respectively after applying firewall rules, then patches them together allowing the data transfer between them.
-
-- This indicates a high security model, which would fit for a SMB router. 
-- It also provides physical/visual separation of our concerns (wan1, wan2, and lan) for security purposes. 
-- By default these are disconnected and physically separated.
-
-And it just makes kinda sense no?
-
-
-*/
 
 
 
-/* disabled temporarily
-// theoretical attempt
-// would need to define the ones not defined or redefine/override existing ones in qcom-ipq4019.dtsi to recreate mfr config
-// perhaps all encapsulated in edma switch as mfr does?
-// also these need to be redefined within SOC and the gmac node from upstream needs to be deleted (with /delete-node/)
-edma {
-	// GMAC0: WAN1
-	gmac0: ethernet@98000 {
-		status = "okay";
-		phy-mode = "sgmii";
-		qcom,id = <1>;
-		nvmem-cells = <&macaddr_art_0>;
-		nvmem-cell-names = "mac-address";
-		fixed-link { speed = <1000>; full-duplex; pause; };
-	};
 
-	gmac1 {
 
-		// nested switch 1 (QCA8337)
-		// nested switch 2 (QCA8075)
-		// or very basic config, and both switches identify gmac1 as "cpu".
 
-	};
 
-	// GMAC2: WAN2
-	gmac2: ethernet@99000 {
-		status = "okay";
-		phy-mode = "rgmii";
-		qcom,id = <2>;
-		tx-internal-delay-ps = <1000>;
-		rx-internal-delay-ps = <1000>;
-		fixed-link { speed = <1000>; full-duplex; };
-	};
-}
-/* disabled temporarily
 
-/*
 
- upstream only has "gmac" but our highly specialized hardware configuration from mfr requires gmac0-2.
- 
- I suggest we delete any upstream nodes ("gmac") , and define our own in the SOC block just as the mfr has for gmac0 gmac1 and gmac2. The mfr has also encapsulated this within an edma block.
- 
- As for switches, don't we define both to use gmac1 as the "cpu" ? That would put them side by side, allowing intercommunication (via the "cpu" aka gmac1 aka eth1) between the switches (two switches, 4 lan each)
- 
- Then OpenWRT handles the communication between wan1, lan, wan2 based on it's firewall rules, etc. with physical separation between the security concerns as expected for an SMB device.
- 
- ### ADDRESS SPACE CONFLICTS ###
-  NOTE: hardware addresses *MUST* match the mfr, other config - eg. daisy chaining - is optional, provided both switches support them (qcom-ipq4019.dtsi shows that both do support daisy chaining)
 
- qcom-ipq4019.dtsi (upstream)			stock-fixed.dts (mfr)
- gmac: ethernet@c080000			->		edma@c080000				Delete upstream nodes, redefine as per mfr.
-																	In the case of upstream, this is "gmac" and no other gmac's are defined. In the case of mfr, this defines an edma-encapsulated gmac0-2
-																	These gmac0-2 aka eth0-2 are suspected to be eth0/wan1, eth1/lan (with two side by side switches), and eth2/wan2
-																	the mfr has defined gmac0 and gmac2 to have extra configuration (speed, duplex, etc.) whereas gmac1 is rather simple with less configuration
-																	due to gmac1 having unique, minimal configuration, I suspect this to be the two switches QCA8337 & QCA8075 (4+4 LAN ports = 8 LAN ports)
-																	due to gmac0 & gmac2 having extra configuration (speed, duplex, etc.) I suspect these to be wan1 and wan2
-																	
- switch: switch@c000000			-> 		ess-switch@c000000			Redefine upstream node (QCA8337) at correct mfr hardware address, mfr proprietary LED control not needed.
-																	upstream: switch@c000000 is a switch (QCA8337) we will keep / mfr: ess-switch@c000000 is a proprietary LED controller we will not include
-																	ess-switch from mfr is not needed. I believe this is how the mfr connects LED's to their source. It contains led_source@0-4 a total of 5 LED's (presumably pwr,wps,2.4g,5g1,5g2)
- 																	I believe this is the proprietary LED controller that abstracts and hides gpio information FOR LEDS from the developer attempting to port the device.
- 																	this combined with lack of GPIO mapping information prevents successful port of devices without advanced/risky technique (probing GPIO and possibly damaging hardware)
-																	how juvenile to prevent access to LEDS FFS!
- 																	
- mdio: mdio@90000				->		mdio@90000					Keep upstream node (QCA8075), ignore mfr definition.
-																	upstream: 5 phy, QCA8337/QCA8075 switches daisy chained / mfr: 4 ports, not possible to be daisychained...
-																	mfr DTS does not indicate whether this is QCA8337 or QCA8075 - it must be one, and the other which is missing must be configured elsewhere (outside DTS?)
-																	mfr defines ethernet-phy@0-4 in this block, it must be 4 of 8 LAN ports (one of the two switches)
-																	answer from below: this must be QCA8075
- 
- I have yet to find the second switch. Perhaps it is configured with init scripts?
- We need to find the other ethernet-phy (there should be another 4 somewhere to total 8 LAN ports)
- 
- Wait... Is it possible, the mfr does not daisy chain and configs the other switch via other means, but in the case of OpenWRT they just daisy chain them and it works?
- If qcom-ipq4019.dtsi defines both a QCA8337 & QCA8075 presumably they would work in the daisy chained configuration - they are the same switches after all ...
- Perhaps we go the daisy chain route, even though mfr does not? What are effects of this? It would still give us 8 LAN ports. The hardware in both cases - upstream and mfr - is the same (QCA8337, QCA8075)
- 
- YES, qcom-ipq4019.dtsi defines *BOTH* QCA8337 & QCA8075 in daisy chain config! That means we possibly can use their implementation instead, the switches are the exact same!
- but the hardware address might be different ... upstream: switch@c000000 (QCA8337) / mfr: switch@???? (QCA8337)
- we can use them but must make sure hardware lies at these exact addresses. 
- 
- Note to self: 	Now we are getting into an interesting area of reverse engineering: parallel reconstruction. 
-				We are utilizing the known possible configuration for the exact same hardware from upstream to make conclusions regarding the mfr configuration
 
- ANSWER: mdio@90000 in upstream matches mdio@90000 in mfr and is a switch. This must be the QCA8075
-		 that leaves the unknown switch to be the QCA8337 - mooleshacat detected mouse :3
 
-QUESTIONS:
-	- where is the QCA8337? ((cat caught mouse :3))
-	- how is the QCA8337 initialized by the mfr? Does it matter given (see below)? ((NO))
-	- given both upstream and mfr use exact same hardware (QCA8337 & QCA8075) can we configure ours like upstream instead of mfr? ((PROBLY))
-	- to me this indicates both switches are compatible with both configurations - side-by-side and daisy-chained ((YES IANDI AGREE))
-	- if we do that , what are the possible negative effects? ((IM AN IDIOT I DONT KNOW HARDWARE ADDRESS SAME AS MFR WE COOL RIGHT BRO))
-	- we would still require them to end up connected to gmac1 ((YES SWITCHES NEED INTERCOMMUNICATION, AND SECURITY CONCERNS REMAIN SEPARATED))
-	
-NOTE RE: ADDRESS SPACE CONFLICTS:
-the table has been corrected, instead of deleting upstream mdio@9000 (QCA8075) we should use it as it is, and connect the QCA8337 daisy chained as upstream does - disregarding mfr.
-though still needs same HARDWARE ADDRESS as mfr and to be connected to gmac1/eth1 to keep security concerns separated as mfr does
 
-if we do not add the proprietary LED controller (why would we?) we free up that space for the QCA8337
 
-IF the LED controler occupied c000000 that means the mfr put the QCA8337 somewhere else. Do we need to find the address, and redefine QCA8337 at that address so the hardware address matches the switch address in software?
-we could keep QCA8075 where it is, given mfr also places it at same hardware address 90000.
 
-- Keep mdio (QCA8075) at 90000 (hardware address matches upstream:mfr)
-- Redefine upstream switch@c000000 (QCA8337) at the correct hardware address from mfr (where is it?)
 
-Final result: eth1 { QCA8075 -> daisy chained -> QCA8337 }
 
-eth1 is "cpu" and QCA8075/mdio is connected to it, then QCA8337 at corrected hardware address daisy chains off QCA8075/phy5
-the entire concoction is known as gmac1/eth1/lan and provides all 8 LAN ports while gmac0/gmac2 provide wan1/wan2
 
-Slight difference from mfr but should work given the exact same switches have been used in this configuration before. 
 
-We only have to find and correct QCA8337 hardware address.
 
-ALL UNDERSTANDING REFINED BY TICKET COMMENT https://github.com/catspeed-cc/openwrt/issues/1#issuecomment-4714065553 WHICH SUPERCEDES PREVIOUS UNDERSTANDING
 
-I am mooleshacat. Switches are nothing.
 
-*/
+
+
