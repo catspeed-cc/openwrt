@@ -23,9 +23,6 @@
 
 #include "qcom-ipq4019-ap.dk04.1.dtsi"
 
-/* Delete the upstream single gmac node */
-/delete-node/ &gmac;
-
 / {
 
 	model = "TRENDnet TEW-829DRU";
@@ -48,83 +45,18 @@
 		mtd9 = &rootfs_1_part;
 		mtd10 = &overlay_part;
 	};
-	
-	soc {
-	
-		edma: ethernet@c080000 {
-			compatible = "qcom,ipq4019-ess-edma";
-			phy-mode = "internal";
-			reg = <0xc080000 0x8000>;
-			qcom,page-mode = <0>;
-			qcom,rx_head_buf_size = <0x604>;
-			qcom,num_gmac = <3>;
-			qcom,mdio_supported;
-			resets = <&gcc ESS_RESET>;
-			reset-names = "ess";
-			clocks = <&gcc GCC_ESS_CLK>;
-			clock-names = "ess";
-			interrupts = <GIC_SPI  65 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI  66 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI  67 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI  68 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI  69 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI  70 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI  71 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI  72 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI  73 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI  74 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI  75 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI  76 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI  77 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI  78 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI  79 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI  80 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI 240 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI 241 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI 242 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI 243 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI 244 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI 245 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI 246 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI 247 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI 248 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI 249 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI 250 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI 251 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI 252 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI 253 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI 254 IRQ_TYPE_EDGE_RISING>,
-						 <GIC_SPI 255 IRQ_TYPE_EDGE_RISING>;
-
-			gmac0: gmac0 {
-				/* WAN2 - switch port 2 - QCA8075 PHY MDIO addr 9 */
-				local-mac-address = [00 00 00 00 00 00];
-				qcom,phy_mdio_addr = <9>;
-				qcom,poll_required = <1>;
-				qcom,forced_speed = <1000>;
-				qcom,forced_duplex = <1>;
-				vlan_tag = <2 0x04>;
-			};
-
-			gmac1: gmac1 {
-				/* LAN - switch ports 3,4,5 - all 8 LAN ports via both switches */
-				local-mac-address = [00 00 00 00 00 00];
-				vlan_tag = <1 0x38>;
-			};
-
-			gmac2: gmac2 {
-				/* WAN1 - switch port 1 - QCA8075 PHY MDIO addr 8 */
-				local-mac-address = [00 00 00 00 00 00];
-				qcom,phy_mdio_addr = <8>;
-				qcom,poll_required = <1>;
-				qcom,forced_speed = <1000>;
-				qcom,forced_duplex = <1>;
-				vlan_tag = <3 0x02>;
-			};
-		};
-	};
 };
 /* end of root block */
+
+&gmac {
+	/* ipqess upstream node — flat, no gmac children */
+	/* All vendor-only props stripped; driver ignores them */
+	phy-mode = "internal";
+	fixed-link {
+		speed = <1000>;
+		full-duplex;
+	};
+};
 
 &mdio {
     status = "okay";
@@ -185,7 +117,7 @@
 			port@0 {
 				reg = <0>;
 				label = "cpu";
-				ethernet = <&gmac1>;
+				ethernet = <&gmac>;
 				phy-mode = "rgmii";
 				tag-protocol = "none";
 				fixed-link {
