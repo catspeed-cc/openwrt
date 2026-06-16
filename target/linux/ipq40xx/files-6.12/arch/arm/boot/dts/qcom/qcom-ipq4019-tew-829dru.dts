@@ -597,6 +597,8 @@ Slight difference from mfr but should work given the exact same switches have be
 
 We only have to find and correct QCA8337 hardware address.
 
+ALL UNDERSTANDING REFINED BY TICKET COMMENT https://github.com/catspeed-cc/openwrt/issues/1#issuecomment-4714065553 WHICH SUPERCEDES PREVIOUS UNDERSTANDING
+
 I am mooleshacat. Switches are nothing.
 
 */
