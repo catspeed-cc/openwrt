@@ -528,7 +528,7 @@ edma {
  Then OpenWRT handles the communication between wan1, lan, wan2 based on it's firewall rules, etc. with physical separation between the security concerns as expected for an SMB device.
  
  ### ADDRESS SPACE CONFLICTS ###
-  NOTE: hardware addresses *MUST* match the mfr, other config - eg. daisy chaining - is optional, provided both switches support them (qcom-ipq4019.dtsi shows that both do)
+  NOTE: hardware addresses *MUST* match the mfr, other config - eg. daisy chaining - is optional, provided both switches support them (qcom-ipq4019.dtsi shows that both do support daisy chaining)
 
  qcom-ipq4019.dtsi (upstream)			stock-fixed.dts (mfr)
  gmac: ethernet@c080000			->		edma@c080000				Delete upstream nodes, redefine as per mfr.
@@ -558,9 +558,12 @@ edma {
  If qcom-ipq4019.dtsi defines both a QCA8337 & QCA8075 presumably they would work in the daisy chained configuration - they are the same switches after all ...
  Perhaps we go the daisy chain route, even though mfr does not? What are effects of this? It would still give us 8 LAN ports. The hardware in both cases - upstream and mfr - is the same (QCA8337, QCA8075)
  
- YES, qcom-ipq4019.dtsi defines *BOTH* QCA8337 & QCA8075! That means we possibly can use their implementation instead, the switches are the exact same!
- but the hardware address might be different ... upstream: switch@c000000 (QCA8337) & mdio@90000 (QCA8075)
+ YES, qcom-ipq4019.dtsi defines *BOTH* QCA8337 & QCA8075 in daisy chain config! That means we possibly can use their implementation instead, the switches are the exact same!
+ but the hardware address might be different ... upstream: switch@c000000 (QCA8337) / mfr: switch@???? (QCA8337)
  we can use them but must make sure hardware lies at these exact addresses. 
+ 
+ Note to self: 	Now we are getting into an interesting area of reverse engineering: parallel reconstruction. 
+				We are utilizing the known possible configuration for the exact same hardware from upstream to make conclusions regarding the mfr configuration
 
  ANSWER: mdio@90000 in upstream matches mdio@90000 in mfr and is a switch. This must be the QCA8075
 		 that leaves the unknown switch to be the QCA8337
