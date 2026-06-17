@@ -51,6 +51,8 @@
 &gmac {
     status = "okay";
     phy-mode = "internal";
+	/* dual-GMAC: RRD port-id 5 = GMAC1 = QCA8337 switch */
+    qcom,gmac1-port = <5>;
     fixed-link {
         speed = <1000>;
         full-duplex;
@@ -167,7 +169,6 @@
                 label = "cpu";
                 ethernet = <&gmac>;      /* side-by-side: ALSO points to EDMA, not to swport5 */
                 phy-mode = "rgmii";
-                tag-protocol = "none";
                 fixed-link {
                     speed = <1000>;
                     full-duplex;
@@ -186,8 +187,8 @@
                 label = "lan5";
                 phy-mode = "internal";
                 phy-handle = <&qca8337_phy1>;
-            };
 
+            };
             port@3 {
                 reg = <3>;
                 label = "lan6";
@@ -308,10 +309,11 @@
 
 /* start of &nand (Micron MT29F1G08ABADA NAND 128MB) */
 &nand {
-    status = "okay";    /* was "disabled" in your WIP — enable it! */
+    status = "disabled";    /* DISABLED WHILE FIGURING OUT SWITCH CONFIG */
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-names;
 
-    pinctrl-0 = <&nand_pins>;
-    pinctrl-names = "default";
+    /* REMOVED PINCTRL - NO CONFLICT PLS */
 
     nand@0 {
         reg = <0>;
@@ -365,14 +367,14 @@
 &tlmm {
 
 	nand_pins {
-        nand-state {
-			/* removed GPIO53, conflict resolved. */
-            pins = "gpio55", "gpio56", "gpio57", "gpio58",
-                   "gpio59", "gpio60", "gpio62", "gpio63", "gpio64",
-                   "gpio65", "gpio66", "gpio67", "gpio68", "gpio69";
-            function = "qpic";
-        };
-    };
+		nand-state {
+			pins = "gpio53", "gpio55", "gpio56", "gpio57", "gpio58",
+				   "gpio59", "gpio60", "gpio62", "gpio63", "gpio64",
+				   "gpio65", "gpio66", "gpio67", "gpio68", "gpio69";
+			function = "qpic";
+			bias-disable;
+		};
+	};
 
 	/* Add this GPIO Hog for USB Power */
 	usb_power_en: usb-power-en {
@@ -382,20 +384,21 @@
 		line-name = "usb-power-enable";
 	};
 	
-	mdio_pins: mdio_pinmux {
-		pinmux_1 {
-			pins = "gpio53";
-			function = "mdio";
-		};
-		pinmux_2 {
-			pins = "gpio52";
-			function = "mdc";
-		};
-		pinconf {
-			pins = "gpio52", "gpio53";
-			bias-pull-up;
-		};
-	};
+
+    mdio_pins: mdio_pinmux {
+        pinmux_1 {
+            pins = "gpio53";
+            function = "mdio";
+        };
+        pinmux_2 {
+            pins = "gpio52";
+            function = "mdc";
+        };
+        pinconf {
+            pins = "gpio52", "gpio53";
+            bias-pull-up;
+        };
+    };
 
 	/* pinmux / gpios */
 	
