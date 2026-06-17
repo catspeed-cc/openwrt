@@ -94,104 +94,70 @@
 		ethphy12: ethernet-phy@12 { reg = <12>; };  /* LAN3 / combo */
 	};
 
-	/*
-	 * QCA8337: standalone DSA switch.
-	 * Connected via RGMII fixed-link DIRECTLY to gmac1 (eth1).
-	 * This is NOT cascaded through the ESS — it is a sibling switch
-	 * on a completely independent MAC. MDIO address 0x10 on the
-	 * shared MDIO bus for management access only.
-	 */
-	qca8337: switch@10 {
-		compatible = "qca,qca8337";
-		#address-cells = <1>;
-		#size-cells = <0>;
-		reg = <0x10>;
+qca8337: switch@10 {
+    compatible = "qca,qca8337";
+    #address-cells = <1>;
+    #size-cells = <0>;
+    reg = <0x10>;
 
-		dsa,member = <1 0>;
+    dsa,member = <1 0>;
 
-		ports {
-			#address-cells = <1>;
-			#size-cells = <0>;
+    mdio {
+        #address-cells = <1>;
+        #size-cells = <0>;
 
-			extport0: port@0 {
-				reg = <0>;
-				label = "cpu";
-				phy-mode = "rgmii";
-				ethernet = <&swport5>;
-				fixed-link {
-					speed = <1000>;
-					full-duplex;
-				};
-			};
+        qca8337_phy0: ethernet-phy@0 { reg = <0>; };
+        qca8337_phy1: ethernet-phy@1 { reg = <1>; };
+        qca8337_phy2: ethernet-phy@2 { reg = <2>; };
+        qca8337_phy3: ethernet-phy@3 { reg = <3>; };
+        qca8337_phy4: ethernet-phy@4 { reg = <4>; };
+    };
 
-			port@1 {
-				reg = <1>;
-				label = "lan3";
-				phy-mode = "gmii";        /* WAS: "internal" — that triggers PHY lookup → NULL → crash */
-				fixed-link {
-					speed = <1000>;
-					full-duplex;
-				};
-			};
+    ports {
+        #address-cells = <1>;
+        #size-cells = <0>;
 
-			port@2 {
-				reg = <2>;
-				label = "lan4";
-				phy-mode = "gmii";        /* WAS: "internal" */
-				fixed-link {
-					speed = <1000>;
-					full-duplex;
-				};
-			};
+        port@0 {
+            reg = <0>;
+            label = "cpu";
+            phy-mode = "rgmii";
+            ethernet = <&swport5>;
+            fixed-link {
+                speed = <1000>;
+                full-duplex;
+            };
+        };
 
-			port@3 {
-				reg = <3>;
-				label = "lan5";
-				phy-mode = "gmii";        /* WAS: "internal" */
-				fixed-link {
-					speed = <1000>;
-					full-duplex;
-				};
-			};
+        port@1 {
+            reg = <1>;
+            label = "lan4";
+            phy-handle = <&qca8337_phy0>;
+        };
 
-			port@4 {
-				reg = <4>;
-				label = "lan6";
-				phy-mode = "gmii";        /* WAS: "internal" */
-				fixed-link {
-					speed = <1000>;
-					full-duplex;
-				};
-			};
+        port@2 {
+            reg = <2>;
+            label = "lan5";
+            phy-handle = <&qca8337_phy1>;
+        };
 
-			port@5 {
-				reg = <5>;
-				label = "lan7";
-				phy-mode = "gmii";        /* WAS: "internal" */
-				fixed-link {
-					speed = <1000>;
-					full-duplex;
-				};
-			};
+        port@3 {
+            reg = <3>;
+            label = "lan6";
+            phy-handle = <&qca8337_phy2>;
+        };
 
-			port@6 {
-				reg = <6>;
-				label = "lan8";
-				phy-mode = "gmii";        /* WAS: "sgmii" — this is a copper port */
-				fixed-link {
-					speed = <1000>;
-					full-duplex;
-				};
-			};
-		};
+        port@4 {
+            reg = <4>;
+            label = "lan7";
+            phy-handle = <&qca8337_phy3>;
+        };
 
-		/*
-		 * QCA8337 internal MDIO bus.
-		 * PHY addresses 0-4 are LOCAL to the switch — do not confuse
-		 * with the top-level MDIO bus where QCA8075 lives at 8-12.
-		 */
-		 
-	};
+        port@5 {
+            reg = <5>;
+            label = "lan8";
+            phy-handle = <&qca8337_phy4>;
+        };
+    };
 };
 
 &switch {
@@ -251,7 +217,6 @@
 			label = "dsa";
 			phy-mode = "rgmii";
 			status = "okay";
-			/delete-property/ phy-handle;
 
 			fixed-link {
 				speed = <1000>;
