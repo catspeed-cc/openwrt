@@ -45,207 +45,184 @@
 		mtd9 = &rootfs_1_part;
 		mtd10 = &overlay_part;
 	};
-};
-/* end of root block */
+}; /* end of root block */
 
+/* EDMA — the CPU-facing ethernet, both switches connect here */
 &gmac {
-	/* ipqess upstream node — flat, no gmac children */
-	status = "okay";
-	
-	/* All vendor-only props stripped; driver ignores them */
-	phy-mode = "internal";
-	fixed-link {
-		speed = <1000>;
-		full-duplex;
-	};
-};
+    status = "okay";
+    phy-mode = "internal";
+    fixed-link {
+        speed = <1000>;
+        full-duplex;
+        pause;
+    };
+}; /* end of gmac */
 
-/* QCA8075 (TOP SWITCH) — ESS built-in switch block */
+/* TOP SWITCH: ESS built-in (QCA8075 via PSGMII) at c000000 */
+/* compatible MUST be qca,ipq4019-qca8337n — this is what ran on the device */
 &switch {
-	status = "okay";
+    status = "okay";
+    compatible = "qca,ipq4019-qca8337n";
 
-	dsa,member = <0 0>;
+    mdio-bus = <&mdio>;
+    psgmii-ethphy = <&ethphy12>;  /* reg=0x0c, the cal PHY at base+4 */
 
-	mdio-bus = <&mdio>;
+    /delete-node/ ports;
 
-	/*
-	 * psgmii-ethphy points to ethphy12 (LAN3/combo port).
-	 * This is the PSGMII calibration PHY for SerDes bring-up sequencing.
-	 */
-	psgmii-ethphy = <&ethphy13>;
-	
-	/delete-node/ ports;   /* nuke ALL upstream port definitions first */
+    ports {
+        #address-cells = <1>;
+        #size-cells = <0>;
 
-	ports {
-		#address-cells = <1>;
-		#size-cells = <0>;
+        port@0 {
+            reg = <0>;
+            label = "cpu";
+            ethernet = <&gmac>;
+            phy-mode = "internal";
+            fixed-link {
+                speed = <1000>;
+                full-duplex;
+                pause;
+                asym-pause;
+            };
+        };
 
-		/*
-		 * port@0 is the CPU port — connects ESS to the EDMA/gmac.
-		 * This MUST be present or DSA refuses to initialize the tree.
-		 */
-		port@0 {
-			reg = <0>;
-			label = "cpu";
-			ethernet = <&gmac>;
-			phy-mode = "internal";
+        port@1 {
+            reg = <1>;
+            label = "wan1";
+            phy-handle = <&ethphy8>;
+            phy-mode = "psgmii";
+            status = "okay";
+        };
 
-			fixed-link {
-				speed = <1000>;
-				full-duplex;
-			};
-		};
+        port@2 {
+            reg = <2>;
+            label = "wan2";
+            phy-handle = <&ethphy9>;
+            phy-mode = "psgmii";
+            status = "okay";
+        };
 
-		swport1: port@1 {
-			reg = <1>;
-			label = "wan1";
-			phy-handle = <&ethphy8>;
-			phy-mode = "psgmii";
-			status = "okay";
-		};
+        port@3 {
+            reg = <3>;
+            label = "lan1";
+            phy-handle = <&ethphy10>;
+            phy-mode = "psgmii";
+            status = "okay";
+        };
 
-		swport2: port@2 {
-			reg = <2>;
-			label = "wan2";
-			phy-handle = <&ethphy9>;
-			phy-mode = "psgmii";
-			status = "okay";
-		};
+        port@4 {
+            reg = <4>;
+            label = "lan2";
+            phy-handle = <&ethphy11>;
+            phy-mode = "psgmii";
+            status = "okay";
+        };
 
-		swport3: port@3 {
-			reg = <3>;
-			label = "lan1";
-			phy-handle = <&ethphy10>;
-			phy-mode = "psgmii";
-			status = "okay";
-		};
+        port@5 {
+            reg = <5>;
+            label = "lan3";
+            phy-handle = <&ethphy12>;   /* same as psgmii-ethphy — cal PHY doubles as port@5 */
+            phy-mode = "psgmii";
+            status = "okay";
+        };
+    };
+}; /* end of switch (QCA8075) */
 
-		swport4: port@4 {
-			reg = <4>;
-			label = "lan2";
-			phy-handle = <&ethphy11>;
-			phy-mode = "psgmii";
-			status = "okay";
-		};
-
-		swport5: port@5 {
-			reg = <5>;
-			label = "dsa";
-			phy-mode = "rgmii";
-			status = "okay";
-
-			fixed-link {
-				speed = <1000>;
-				full-duplex;
-			};
-		};
-		/*
-		 * NO port@6 — valid ESS indices are 0-5 only (num_ports=6).
-		 * QCA8337 cascades from swport5 via RGMII, not as a child port here.
-		 */
-	};
-
-};
-/* end of &switch (QCA8075) */
-
+/* MDIO bus — contains QCA8075 package AND QCA8337 bottom switch */
 &mdio {
-	status = "okay";
-	pinctrl-0 = <&mdio_pins>;
-	pinctrl-names = "default";
+    status = "okay";
+    pinctrl-0 = <&mdio_pins>;
+    pinctrl-names = "default";
 
-	/*
-	 * DELETE the upstream qca8075-package@0 node.
-	 * Upstream qcom-ipq4019.dtsi defines the package at reg=<0> (addresses 0-4).
-	 * Our board hardware-straps QCA8075 to MDIO addresses 8-12.
-	 * Without this delete, the driver probes addresses 0-5 and panics on missing addr 5.
-	 */
-	/delete-node/ ethernet-phy-package@0;
+    /delete-node/ ethernet-phy-package@0;
 
-	/*
-	 * QCA8075: 5-port PHY package. TOP SWITCH.
-	 * Board hardware-straps the MDIO base address to 8.
-	 * PHYs at addresses 8-12, PSGMII calibration PHY implicit at base+5=13.
-	 * The qcom,qca8075-package driver handles PSGMII bring-up internally.
-	 * tx-drive-strength-milliwatt = 300 per IPQ4019 reference design spec.
-	 */
-	ethernet-phy-package@8 {
-		#address-cells = <1>;
-		#size-cells = <0>;
-		compatible = "qcom,qca8075-package";
-		reg = <8>;
-		qcom,tx-drive-strength-milliwatt = <300>;
+    /* QCA8075: 5-port PHY package, MDIO base addr 8 */
+    ethernet-phy-package@8 {
+        #address-cells = <1>;
+        #size-cells = <0>;
+        compatible = "qcom,qca8075-package";
+        reg = <8>;
+        qcom,tx-drive-strength-milliwatt = <300>;
 
-		ethphy8:  ethernet-phy@8  { reg = <8>;  };  /* WAN1 */
-		ethphy9:  ethernet-phy@9  { reg = <9>;  };  /* WAN2 */
-		ethphy10: ethernet-phy@10 { reg = <10>; };  /* LAN1 */
-		ethphy11: ethernet-phy@11 { reg = <11>; };  /* LAN2 */
-		ethphy12: ethernet-phy@12 { reg = <12>; };  /* LAN3 */
-		ethphy13: ethernet-phy@13 { reg = <13>; };  /* PSGMII cal PHY */
-	};
+        ethphy8:  ethernet-phy@8  { reg = <8>;  };  /* WAN1 */
+        ethphy9:  ethernet-phy@9  { reg = <9>;  };  /* WAN2 */
+        ethphy10: ethernet-phy@10 { reg = <10>; };  /* LAN1 */
+        ethphy11: ethernet-phy@11 { reg = <11>; };  /* LAN2 */
+        ethphy12: ethernet-phy@12 { reg = <12>; };  /* LAN3 / psgmii cal PHY */
+    };
 
-	/*
-	 * QCA8337: DSA switch. BOTTOM SWITCH, cascaded from QCA8075 swport5.
-	 * Connected via RGMII fixed-link to ESS swport5 (the cascade port).
-	 * MDIO address 0x10 on the shared bus for management access.
-	 * Internal MDIO bus manages PHYs 0-4 (LAN4-LAN8).
-	 */
-	qca8337: switch@10 {
-		compatible = "qca,qca8337";
-		#address-cells = <1>;
-		#size-cells = <0>;
-		reg = <0x10>;
+    /* BOTTOM SWITCH: QCA8337 — side by side, own CPU port pointing to same EDMA */
+    qca8337: switch@10 {
+        compatible = "qca,qca8337";
+        #address-cells = <1>;
+        #size-cells = <0>;
+        reg = <0x10>;
 
-		dsa,member = <1 0>;
+        ports {
+            #address-cells = <1>;
+            #size-cells = <0>;
 
-		ports {
-			#address-cells = <1>;
-			#size-cells = <0>;
+            port@0 {
+                reg = <0>;
+                label = "cpu";
+                ethernet = <&gmac>;      /* side-by-side: ALSO points to EDMA, not to swport5 */
+                phy-mode = "rgmii";
+                tag-protocol = "none";
+                fixed-link {
+                    speed = <1000>;
+                    full-duplex;
+                };
+            };
 
-			port@0 {
-				reg = <0>;
-				label = "cpu";
-				phy-mode = "rgmii";
-				ethernet = <&swport5>;
-				fixed-link {
-					speed = <1000>;
-					full-duplex;
-				};
-			};
-			port@1 {
-				reg = <1>;
-				label = "lan3";
-			};
+            port@1 {
+                reg = <1>;
+                label = "lan4";
+                phy-mode = "internal";
+                phy-handle = <&qca8337_phy0>;
+            };
 
-			port@2 {
-				reg = <2>;
-				label = "lan4";
-			};
+            port@2 {
+                reg = <2>;
+                label = "lan5";
+                phy-mode = "internal";
+                phy-handle = <&qca8337_phy1>;
+            };
 
-			port@3 {
-				reg = <3>;
-				label = "lan5";
-			};
+            port@3 {
+                reg = <3>;
+                label = "lan6";
+                phy-mode = "internal";
+                phy-handle = <&qca8337_phy2>;
+            };
 
-			port@4 {
-				reg = <4>;
-				label = "lan6";
-			};
+            port@4 {
+                reg = <4>;
+                label = "lan7";
+                phy-mode = "internal";
+                phy-handle = <&qca8337_phy3>;
+            };
 
-			port@5 {
-				reg = <5>;
-				label = "lan7";
-			};
+            port@5 {
+                reg = <5>;
+                label = "lan8";
+                phy-mode = "internal";
+                phy-handle = <&qca8337_phy4>;
+            };
+        };
 
-			port@6 {
-				reg = <6>;
-				label = "lan8";
-			};
-		};
-	};
-	/* end of QCA8337 */
+        /* QCA8337 internal MDIO bus — local PHY addresses 0-4 */
+        mdio {
+            #address-cells = <1>;
+            #size-cells = <0>;
 
-};
-/* end of &mdio */
+            qca8337_phy0: ethernet-phy@0 { reg = <0>; };
+            qca8337_phy1: ethernet-phy@1 { reg = <1>; };
+            qca8337_phy2: ethernet-phy@2 { reg = <2>; };
+            qca8337_phy3: ethernet-phy@3 { reg = <3>; };
+            qca8337_phy4: ethernet-phy@4 { reg = <4>; };
+        };
+    };
+}; /* end of &mdio (QCA8075/QCA8337) */
 
 /* 8MB FLASH CHIP (Macronix MX25L6433F SPI NOR 8MB) */
 &blsp1_spi1 {
@@ -255,7 +232,7 @@
 	pinctrl-0 = <&spi_0_pinmux>;
 	pinctrl-names = "default";
 
-	cs-gpios = <&tlmm 12 GPIO_ACTIVE_HIGH>;
+	cs-gpios = <&tlmm 12 GPIO_ACTIVE_LOW>;
 
 	flash: flash@0 {
 
@@ -328,45 +305,42 @@
 	status = "okay";
 };
 /* end of &qpic_bam (Micron MT29F1G08ABADA NAND 128MB) */
+
 /* start of &nand (Micron MT29F1G08ABADA NAND 128MB) */
 &nand {
-	status = "disabled";
-	
-	/delete-property/ pinctrl-0;
-	/delete-property/ pinctrl-names;
+    status = "okay";    /* was "disabled" in your WIP — enable it! */
 
-	nand@0 {
-		reg = <0>;
+    pinctrl-0 = <&nand_pins>;
+    pinctrl-names = "default";
 
-		/* Micron MT29F1G08ABADA: 128MB, 8-bit bus, 4-bit ECC */
-		nand-ecc-strength = <4>;
-		nand-ecc-step-size = <512>;
-		nand-bus-width = <8>;
+    nand@0 {
+        reg = <0>;
 
-		partitions {
-			compatible = "fixed-partitions";
-			#address-cells = <1>;
-			#size-cells = <1>;
+        nand-ecc-strength = <4>;
+        nand-ecc-step-size = <512>;
+        nand-bus-width = <8>;
 
-			/* Primary boot image: kernel + ubi_rootfs UBI volumes */
-			rootfs_part: partition@0 {
-				label = "rootfs";
-				reg = <0x00000000 0x03000000>; /* 48MB */
-			};
+        partitions {
+            compatible = "fixed-partitions";
+            #address-cells = <1>;
+            #size-cells = <1>;
 
-			/* Secondary/failsafe boot image: kernel + ubi_rootfs UBI volumes */
-			rootfs_1_part: partition@3000000 {
-				label = "rootfs_1";
-				reg = <0x03000000 0x03000000>; /* 48MB */
-			};
+            rootfs_part: partition@0 {
+                label = "rootfs";
+                reg = <0x00000000 0x03000000>; /* 48MB */
+            };
 
-			/* Persistent config overlay: rootfs_data UBI volume */
-			overlay_part: partition@6000000 {
-				label = "overlay";
-				reg = <0x06000000 0x02000000>; /* 32MB */
-			};
-		};
-	};
+            rootfs_1_part: partition@3000000 {
+                label = "rootfs_1";
+                reg = <0x03000000 0x03000000>; /* 48MB */
+            };
+
+            overlay_part: partition@6000000 {
+                label = "overlay";
+                reg = <0x06000000 0x02000000>; /* 32MB */
+            };
+        };
+    };
 };
 /* end of &nand (Micron MT29F1G08ABADA NAND 128MB) */
 
@@ -390,9 +364,14 @@
 
 &tlmm {
 
-	/* UPSTREAM BLOCKING PINS FOR SWITCHES! MEANS NAND PINS WERE WRONG / NAND WAS BORKED */
-	/delete-node/ nand_pins;
-	/delete-node/ nand_state;
+	nand_pins: nand_pins {
+        nand-state {
+            pins = "gpio53", "gpio55", "gpio56", "gpio57", "gpio58",
+                   "gpio59", "gpio60", "gpio62", "gpio63", "gpio64",
+                   "gpio65", "gpio66", "gpio67", "gpio68", "gpio69";
+            function = "qpic";
+        };
+    };
 
 	/* Add this GPIO Hog for USB Power */
 	usb_power_en: usb-power-en {
