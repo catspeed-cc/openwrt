@@ -60,123 +60,21 @@
 	};
 };
 
-&mdio {
-	status = "okay";
-	pinctrl-0 = <&mdio_pins>;
-	pinctrl-names = "default";
-	
-	/*
-	 * DELETE the upstream qca8075-package@0 node.
-	 * Upstream qcom-ipq4019.dtsi defines the package at reg=<0> (addresses 0-4).
-	 * Our board hardware-straps QCA8075 to MDIO addresses 8-12.
-	 * Without this delete, the driver probes addresses 0-5 and panics on missing addr 5.
-	 */
-	/delete-node/ ethernet-phy-package@0;
-
-	/*
-	 * QCA8075: 5-port PHY package.
-	 * Board hardware-straps the MDIO base address to 8.
-	 * PHYs at addresses 8-12, PSGMII calibration PHY implicit at base+5=13.
-	 * The qcom,qca8075-package driver handles PSGMII bring-up internally.
-	 * tx-drive-strength-milliwatt = 300 per IPQ4019 reference design spec.
-	 */
-	ethernet-phy-package@8 {
-		#address-cells = <1>;
-		#size-cells = <0>;
-		compatible = "qcom,qca8075-package";
-		reg = <8>;
-		qcom,tx-drive-strength-milliwatt = <300>;
-
-		ethphy8:  ethernet-phy@8  { reg = <8>;  };  /* WAN1 */
-		ethphy9:  ethernet-phy@9  { reg = <9>;  };  /* WAN2 */
-		ethphy10: ethernet-phy@10 { reg = <10>; };  /* LAN1 */
-		ethphy11: ethernet-phy@11 { reg = <11>; };  /* LAN2 */
-		ethphy12: ethernet-phy@12 { reg = <12>; };  /* LAN3 / combo */
-	};
-
-qca8337: switch@10 {
-    compatible = "qca,qca8337";
-    #address-cells = <1>;
-    #size-cells = <0>;
-    reg = <0x10>;
-
-    dsa,member = <1 0>;
-
-    mdio {
-        #address-cells = <1>;
-        #size-cells = <0>;
-
-        qca8337_phy0: ethernet-phy@0 { reg = <0>; };
-        qca8337_phy1: ethernet-phy@1 { reg = <1>; };
-        qca8337_phy2: ethernet-phy@2 { reg = <2>; };
-        qca8337_phy3: ethernet-phy@3 { reg = <3>; };
-        qca8337_phy4: ethernet-phy@4 { reg = <4>; };
-    };
-
-    ports {
-        #address-cells = <1>;
-        #size-cells = <0>;
-
-        port@0 {
-            reg = <0>;
-            label = "cpu";
-            phy-mode = "rgmii";
-            ethernet = <&swport5>;
-            fixed-link {
-                speed = <1000>;
-                full-duplex;
-            };
-        };
-
-        port@1 {
-            reg = <1>;
-            label = "lan4";
-            phy-handle = <&qca8337_phy0>;
-        };
-
-        port@2 {
-            reg = <2>;
-            label = "lan5";
-            phy-handle = <&qca8337_phy1>;
-        };
-
-        port@3 {
-            reg = <3>;
-            label = "lan6";
-            phy-handle = <&qca8337_phy2>;
-        };
-
-        port@4 {
-            reg = <4>;
-            label = "lan7";
-            phy-handle = <&qca8337_phy3>;
-        };
-
-        port@5 {
-            reg = <5>;
-            label = "lan8";
-            phy-handle = <&qca8337_phy4>;
-        };
-    };
-};
-
+/* QCA8075 (TOP SWITCH) — ESS built-in switch block */
 &switch {
 	status = "okay";
-	
+
 	dsa,member = <0 0>;
-	
+
 	mdio-bus = <&mdio>;
-	//qca,mdio = <&mdio>; //alternative if above not work
 
 	/*
-	 * psgmii-ethphy points to the last PHY in the QCA8075 package (ethphy12).
-	 * This is the combo port and serves as the PSGMII calibration PHY.
-	 * The qca8075-package driver uses this for SerDes bring-up sequencing.
+	 * psgmii-ethphy points to ethphy12 (LAN3/combo port).
+	 * This is the PSGMII calibration PHY for SerDes bring-up sequencing.
 	 */
 	psgmii-ethphy = <&ethphy12>;
 
 	ports {
-	
 		#address-cells = <1>;
 		#size-cells = <0>;
 
@@ -225,16 +123,126 @@ qca8337: switch@10 {
 		};
 		/*
 		 * NO port@6 — valid ESS indices are 0-5 only (num_ports=6).
-		 * QCA8337 is NOT cascaded here. (?It lives on gmac1 independently?)
+		 * QCA8337 cascades from swport5 via RGMII, not as a child port here.
 		 */
 	};
-	
+
 };
+/* end of &switch (QCA8075) */
 
+&mdio {
+	status = "okay";
+	pinctrl-0 = <&mdio_pins>;
+	pinctrl-names = "default";
 
+	/*
+	 * DELETE the upstream qca8075-package@0 node.
+	 * Upstream qcom-ipq4019.dtsi defines the package at reg=<0> (addresses 0-4).
+	 * Our board hardware-straps QCA8075 to MDIO addresses 8-12.
+	 * Without this delete, the driver probes addresses 0-5 and panics on missing addr 5.
+	 */
+	/delete-node/ ethernet-phy-package@0;
+
+	/*
+	 * QCA8075: 5-port PHY package. TOP SWITCH.
+	 * Board hardware-straps the MDIO base address to 8.
+	 * PHYs at addresses 8-12, PSGMII calibration PHY implicit at base+5=13.
+	 * The qcom,qca8075-package driver handles PSGMII bring-up internally.
+	 * tx-drive-strength-milliwatt = 300 per IPQ4019 reference design spec.
+	 */
+	ethernet-phy-package@8 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "qcom,qca8075-package";
+		reg = <8>;
+		qcom,tx-drive-strength-milliwatt = <300>;
+
+		ethphy8:  ethernet-phy@8  { reg = <8>;  };  /* WAN1 */
+		ethphy9:  ethernet-phy@9  { reg = <9>;  };  /* WAN2 */
+		ethphy10: ethernet-phy@10 { reg = <10>; };  /* LAN1 */
+		ethphy11: ethernet-phy@11 { reg = <11>; };  /* LAN2 */
+		ethphy12: ethernet-phy@12 { reg = <12>; };  /* LAN3 / PSGMII cal PHY */
+	};
+
+	/*
+	 * QCA8337: DSA switch. BOTTOM SWITCH, cascaded from QCA8075 swport5.
+	 * Connected via RGMII fixed-link to ESS swport5 (the cascade port).
+	 * MDIO address 0x10 on the shared bus for management access.
+	 * Internal MDIO bus manages PHYs 0-4 (LAN4-LAN8).
+	 */
+	qca8337: switch@10 {
+		compatible = "qca,qca8337";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x10>;
+
+		dsa,member = <1 0>;
+
+		mdio {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			qca8337_phy0: ethernet-phy@0 { reg = <0>; };  /* LAN4 */
+			qca8337_phy1: ethernet-phy@1 { reg = <1>; };  /* LAN5 */
+			qca8337_phy2: ethernet-phy@2 { reg = <2>; };  /* LAN6 */
+			qca8337_phy3: ethernet-phy@3 { reg = <3>; };  /* LAN7 */
+			qca8337_phy4: ethernet-phy@4 { reg = <4>; };  /* LAN8 */
+		};
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				label = "cpu";
+				phy-mode = "rgmii";
+				ethernet = <&swport5>;
+				fixed-link {
+					speed = <1000>;
+					full-duplex;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				label = "lan4";
+				phy-handle = <&qca8337_phy0>;
+			};
+
+			port@2 {
+				reg = <2>;
+				label = "lan5";
+				phy-handle = <&qca8337_phy1>;
+			};
+
+			port@3 {
+				reg = <3>;
+				label = "lan6";
+				phy-handle = <&qca8337_phy2>;
+			};
+
+			port@4 {
+				reg = <4>;
+				label = "lan7";
+				phy-handle = <&qca8337_phy3>;
+			};
+
+			port@5 {
+				reg = <5>;
+				label = "lan8";
+				phy-handle = <&qca8337_phy4>;
+			};
+		};
+	};
+	/* end of QCA8337 */
+
+};
+/* end of &mdio */
+
+/* 8MB FLASH CHIP (Macronix MX25L6433F SPI NOR 8MB) */
 &blsp1_spi1 {
 
-	/* 8MB FLASH CHIP (Macronix MX25L6433F SPI NOR 8MB) */
 	status = "okay";
 
 	pinctrl-0 = <&spi_0_pinmux>;
@@ -583,19 +591,19 @@ qca8337: switch@10 {
 
 
 
+/*
 
-// TODO:
+ NAND TODO:
+	- FIX NAND - fucking nand is impossible, memory address conflicts with qcom-ipq4019.dtsi
+	- DO NOT MIX SPI/NAND PARTITIONS!
+	- NAND IS DIFFERENT GPIOS, GPIO53 IS IN USE - FIND CORRECT NAND GPIO
 
-/* CHANGE 1: ADD NAND - fucking nand is impossible, memory address conflicts with qcom-ipq4019.dtsi */
-/*           DO NOT MIX SPI/NAND PARTITIONS! */
+ LED TODO:
+	- Probe GPIOs
+	- Add DTS config for LEDs
 
-/* CHANGE 2: Add Switch Configuration if not present in the .dtsi */
-/* The AP-DK04.1.dtsi might not have the specific QCA8337 setup for the TEW-829DRU */
-/* If the SDK .dtsi already has the switch defined correctly, you can skip this. */
-/* If not, append the &gmac1 and &mdio blocks here (from previous steps). */
+*/
 
-
-/* CHANGE 3: Add wifi from existing/old DTS config attempts, and copy board*.bin (CALDATA) files */
 
 
 
