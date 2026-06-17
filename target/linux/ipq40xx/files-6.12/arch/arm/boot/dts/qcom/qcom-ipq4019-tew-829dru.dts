@@ -107,17 +107,12 @@
 		#size-cells = <0>;
 		reg = <0x10>;
 
-		dsa,member = <0 1>;
+		dsa,member = <1 0>;
 
 		ports {
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			/*
-			 * CPU port: RGMII fixed-link to gmac1.
-			 * gmac1 is the SoC's second GMAC, independent of the ESS.
-			 * 1000 Mbps full-duplex — no autoneg on a fixed MAC-to-switch link.
-			 */
 			extport0: port@0 {
 				reg = <0>;
 				label = "cpu";
@@ -131,39 +126,63 @@
 
 			port@1 {
 				reg = <1>;
-				label = "lan4";
-				phy-mode = "internal";
-				phy-handle = <&qca8337_phy0>;
+				label = "lan3";
+				phy-mode = "gmii";        /* WAS: "internal" — that triggers PHY lookup → NULL → crash */
+				fixed-link {
+					speed = <1000>;
+					full-duplex;
+				};
 			};
 
 			port@2 {
 				reg = <2>;
-				label = "lan5";
-				phy-mode = "internal";
-				phy-handle = <&qca8337_phy1>;
+				label = "lan4";
+				phy-mode = "gmii";        /* WAS: "internal" */
+				fixed-link {
+					speed = <1000>;
+					full-duplex;
+				};
 			};
 
 			port@3 {
 				reg = <3>;
-				label = "lan6";
-				phy-mode = "internal";
-				phy-handle = <&qca8337_phy2>;
+				label = "lan5";
+				phy-mode = "gmii";        /* WAS: "internal" */
+				fixed-link {
+					speed = <1000>;
+					full-duplex;
+				};
 			};
 
 			port@4 {
 				reg = <4>;
-				label = "lan7";
-				phy-mode = "internal";
-				phy-handle = <&qca8337_phy3>;
+				label = "lan6";
+				phy-mode = "gmii";        /* WAS: "internal" */
+				fixed-link {
+					speed = <1000>;
+					full-duplex;
+				};
 			};
 
 			port@5 {
 				reg = <5>;
-				label = "lan8";
-				phy-mode = "internal";
-				phy-handle = <&qca8337_phy4>;
+				label = "lan7";
+				phy-mode = "gmii";        /* WAS: "internal" */
+				fixed-link {
+					speed = <1000>;
+					full-duplex;
+				};
 			};
-			
+
+			port@6 {
+				reg = <6>;
+				label = "lan8";
+				phy-mode = "gmii";        /* WAS: "sgmii" — this is a copper port */
+				fixed-link {
+					speed = <1000>;
+					full-duplex;
+				};
+			};
 		};
 
 		/*
@@ -171,16 +190,7 @@
 		 * PHY addresses 0-4 are LOCAL to the switch — do not confuse
 		 * with the top-level MDIO bus where QCA8075 lives at 8-12.
 		 */
-		mdio {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			qca8337_phy0: ethernet-phy@0 { reg = <0>; };
-			qca8337_phy1: ethernet-phy@1 { reg = <1>; };
-			qca8337_phy2: ethernet-phy@2 { reg = <2>; };
-			qca8337_phy3: ethernet-phy@3 { reg = <3>; };
-			qca8337_phy4: ethernet-phy@4 { reg = <4>; };
-		};
+		 
 	};
 };
 
@@ -200,6 +210,7 @@
 	psgmii-ethphy = <&ethphy12>;
 
 	ports {
+	
 		#address-cells = <1>;
 		#size-cells = <0>;
 
@@ -247,12 +258,12 @@
 				full-duplex;
 			};
 		};
-		
 		/*
 		 * NO port@6 — valid ESS indices are 0-5 only (num_ports=6).
 		 * QCA8337 is NOT cascaded here. (?It lives on gmac1 independently?)
 		 */
 	};
+	
 };
 
 
