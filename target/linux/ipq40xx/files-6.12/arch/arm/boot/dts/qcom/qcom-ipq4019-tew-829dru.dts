@@ -366,7 +366,8 @@
 
 	nand_pins {
         nand-state {
-            pins = "gpio53", "gpio55", "gpio56", "gpio57", "gpio58",
+			/* removed GPIO53, conflict resolved. */
+            pins = "gpio55", "gpio56", "gpio57", "gpio58",
                    "gpio59", "gpio60", "gpio62", "gpio63", "gpio64",
                    "gpio65", "gpio66", "gpio67", "gpio68", "gpio69";
             function = "qpic";
