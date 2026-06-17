@@ -72,7 +72,7 @@
 	 * psgmii-ethphy points to ethphy12 (LAN3/combo port).
 	 * This is the PSGMII calibration PHY for SerDes bring-up sequencing.
 	 */
-	psgmii-ethphy = <&ethphy12>;
+	psgmii-ethphy = <&ethphy13>;
 	
 	/delete-node/ ports;   /* nuke ALL upstream port definitions first */
 
@@ -179,7 +179,8 @@
 		ethphy9:  ethernet-phy@9  { reg = <9>;  };  /* WAN2 */
 		ethphy10: ethernet-phy@10 { reg = <10>; };  /* LAN1 */
 		ethphy11: ethernet-phy@11 { reg = <11>; };  /* LAN2 */
-		ethphy12: ethernet-phy@12 { reg = <12>; };  /* LAN3 / PSGMII cal PHY */
+		ethphy12: ethernet-phy@12 { reg = <12>; };  /* LAN3 */
+		ethphy13: ethernet-phy@13 { reg = <13>; };  /* PSGMII cal PHY */
 	};
 
 	/*
@@ -195,17 +196,6 @@
 		reg = <0x10>;
 
 		dsa,member = <1 0>;
-
-		mdio {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			qca8337_phy0: ethernet-phy@0 { reg = <0>; };  /* LAN4 */
-			qca8337_phy1: ethernet-phy@1 { reg = <1>; };  /* LAN5 */
-			qca8337_phy2: ethernet-phy@2 { reg = <2>; };  /* LAN6 */
-			qca8337_phy3: ethernet-phy@3 { reg = <3>; };  /* LAN7 */
-			qca8337_phy4: ethernet-phy@4 { reg = <4>; };  /* LAN8 */
-		};
 
 		ports {
 			#address-cells = <1>;
@@ -225,31 +215,26 @@
 			port@1 {
 				reg = <1>;
 				label = "lan4";
-				phy-handle = <&qca8337_phy0>;
 			};
 
 			port@2 {
 				reg = <2>;
 				label = "lan5";
-				phy-handle = <&qca8337_phy1>;
 			};
 
 			port@3 {
 				reg = <3>;
 				label = "lan6";
-				phy-handle = <&qca8337_phy2>;
 			};
 
 			port@4 {
 				reg = <4>;
 				label = "lan7";
-				phy-handle = <&qca8337_phy3>;
 			};
 
 			port@5 {
 				reg = <5>;
 				label = "lan8";
-				phy-handle = <&qca8337_phy4>;
 			};
 		};
 	};
