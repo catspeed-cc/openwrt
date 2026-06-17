@@ -73,10 +73,28 @@
 	 * This is the PSGMII calibration PHY for SerDes bring-up sequencing.
 	 */
 	psgmii-ethphy = <&ethphy12>;
+	
+	/delete-node/ ports;   /* nuke ALL upstream port definitions first */
 
 	ports {
 		#address-cells = <1>;
 		#size-cells = <0>;
+
+		/*
+		 * port@0 is the CPU port — connects ESS to the EDMA/gmac.
+		 * This MUST be present or DSA refuses to initialize the tree.
+		 */
+		port@0 {
+			reg = <0>;
+			label = "cpu";
+			ethernet = <&gmac>;
+			phy-mode = "internal";
+
+			fixed-link {
+				speed = <1000>;
+				full-duplex;
+			};
+		};
 
 		swport1: port@1 {
 			reg = <1>;
