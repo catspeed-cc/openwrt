@@ -60,6 +60,8 @@
     };
 }; /* end of gmac */
 
+/* we are working on driver patch for second gmac for QCA8075/QCA8337 side-by-side config */
+
 /* TOP SWITCH: ESS built-in (QCA8075 via PSGMII) at c000000 */
 /* compatible MUST be qca,ipq4019-qca8337n — this is what ran on the device */
 &switch {

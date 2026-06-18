@@ -1,0 +1,124 @@
+--- a/drivers/net/ethernet/qualcomm/ipqess/ipqess.h
++++ b/drivers/net/ethernet/qualcomm/ipqess/ipqess.h
+@@ -162,6 +162,9 @@ struct ipqess_rx_ring_refill {
+ struct ipqess {
+        struct net_device *netdev;
++       /* second netdev for the QCA8337 CPU port (port 5 of the internal switch) */
++       struct net_device *netdev2;
++       u32 gmac1_port;         /* switch port number routed to netdev2, 0 = disabled */
+        void __iomem *hw_addr;
+ 
+        struct clk *ess_clk;
+--- a/drivers/net/ethernet/qualcomm/ipqess/ipqess.c
++++ b/drivers/net/ethernet/qualcomm/ipqess/ipqess.c
+@@ -393,8 +393,22 @@ static int ipqess_rx_poll(struct ipqess_rx_ring *rx_ring, int budget)
+                        skb_put(skb, length);
+                }
+ 
+-               skb->dev = rx_ring->ess->netdev;
+-               skb->protocol = eth_type_trans(skb, rx_ring->ess->netdev);
++               /* Demux to netdev2 if the RRD source port matches gmac1_port.
++                * rrd0 bits [14:12] carry the originating switch port id.
++                * IPQESS_RRD_PORT_ID_MASK = 0x7000
++                */
++               if (rx_ring->ess->gmac1_port &&
++                   rx_ring->ess->netdev2 &&
++                   netif_running(rx_ring->ess->netdev2)) {
++                       u16 src_port = (le16_to_cpu(rd->rrd0) & IPQESS_RRD_PORT_ID_MASK) >> 12;
++
++                       if (src_port == rx_ring->ess->gmac1_port) {
++                               skb->dev = rx_ring->ess->netdev2;
++                               skb->protocol = eth_type_trans(skb, rx_ring->ess->netdev2);
++                               goto rx_demux_done;
++                       }
++               }
++               skb->dev = rx_ring->ess->netdev;
++               skb->protocol = eth_type_trans(skb, rx_ring->ess->netdev);
++rx_demux_done:
+                skb_record_rx_queue(skb, rx_ring->ring_id);
+ 
+@@ -1185,6 +1199,7 @@ static int ipqess_axi_probe(struct platform_device *pdev)
+        struct device_node *np = pdev->dev.of_node;
+        struct net_device *netdev;
++       struct net_device *netdev2 = NULL;
+        phy_interface_t phy_mode;
+        struct ipqess *ess;
+        int i, err = 0;
+@@ -1199,6 +1214,7 @@ static int ipqess_axi_probe(struct platform_device *pdev)
+        ess = netdev_priv(netdev);
+        ess->netdev = netdev;
+        ess->pdev = pdev;
++       ess->gmac1_port = 0;
+        spin_lock_init(&ess->stats_lock);
+        SET_NETDEV_DEV(netdev, &pdev->dev);
+        platform_set_drvdata(pdev, netdev);
+@@ -1275,6 +1291,51 @@ static int ipqess_axi_probe(struct platform_device *pdev)
+        err = register_netdev(netdev);
+        if (err)
+                goto err_notifier_unregister;
++
++       /* Optional second GMAC for TEW-829DRU / dual-switch boards.
++        * DTS: qcom,gmac1-port = <5>; in the ethernet node selects
++        * which switch CPU port is demuxed to the second netdev.
++        */
++       {
++               u32 port;
++               if (!of_property_read_u32(np, "qcom,gmac1-port", &port) && port) {
++                       netdev2 = alloc_etherdev(0);
++                       if (!netdev2) {
++                               dev_warn(&pdev->dev,
++                                        "gmac1: failed to alloc netdev2, single-GMAC mode\n");
++                               goto skip_gmac1;
++                       }
++
++                       SET_NETDEV_DEV(netdev2, &pdev->dev);
++                       netdev2->netdev_ops = &ipqess_axi_netdev_ops;
++                       netdev2->features   = netdev->features;
++                       netdev2->hw_features = 0;
++                       netdev2->vlan_features = netdev->vlan_features;
++                       netdev2->watchdog_timeo = 5 * HZ;
++                       netdev2->max_mtu = 9000;
++                       netdev2->gso_max_segs = IPQESS_TX_RING_SIZE / 2;
++                       /* Give it a MAC derived from netdev's by flipping one bit */
++                       eth_hw_addr_inherit(netdev2, netdev);
++                       netdev2->dev_addr [5] ^= 0x01;
++
++                       /* Point priv back to the same ess so all ring/hw
++                        * operations reuse the existing infrastructure.
++                        * netdev_priv(netdev2) would return garbage because
++                        * we used alloc_etherdev(0) – store ess in
++                        * netdev->ml_priv instead.
++                        */
++                       netdev2->ml_priv = ess;
++
++                       err = register_netdev(netdev2);
++                       if (err) {
++                               free_netdev(netdev2);
++                               dev_warn(&pdev->dev,
++                                        "gmac1: register_netdev failed (%d), single-GMAC mode\n",
++                                        err);
++                               goto skip_gmac1;
++                       }
++
++                       ess->gmac1_port = port;
++                       ess->netdev2    = netdev2;
++                       dev_info(&pdev->dev, "gmac1: netdev2=%s demuxing switch port %u\n",
++                                netdev2->name, port);
++               }
++       }
++skip_gmac1:
+ 
+        dev_set_threaded(netdev, true);
+ 
+@@ -1305,6 +1366,11 @@ static void ipqess_axi_remove(struct platform_device *pdev)
+        const struct net_device *netdev = platform_get_drvdata(pdev);
+        struct ipqess *ess = netdev_priv(netdev);
+ 
++       if (ess->netdev2) {
++               unregister_netdev(ess->netdev2);
++               free_netdev(ess->netdev2);
++               ess->netdev2 = NULL;
++       }
++
+        unregister_netdev(ess->netdev);
+        ipqess_hw_stop(ess);
