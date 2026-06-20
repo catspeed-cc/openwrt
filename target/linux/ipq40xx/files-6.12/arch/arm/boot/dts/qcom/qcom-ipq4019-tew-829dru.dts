@@ -440,7 +440,7 @@
 		phandle = <0x56>;
 
 		mux {
-			pins = "gpio8\0gpio9\0gpio10\0gpio11";
+			pins = "gpio8", "gpio9", gpio10", "gpio11";
 			function = "blsp_uart1";
 			bias-disable;
 		};
@@ -451,7 +451,7 @@
 		phandle = <0x4a>;
 
 		mux {
-			pins = "gpio12\0gpio13\0gpio14\0gpio15";
+			pins = "gpio12", "gpio13", "gpio14", "gpio15";
 			function = "blsp_spi0";
 			bias-disable;
 		};
@@ -462,7 +462,7 @@
 		phandle = <0x4f>;
 
 		mux {
-			pins = "gpio20\0gpio21";
+			pins = "gpio20", "gpio21";
 			function = "blsp_i2c0";
 			bias-disable;
 		};

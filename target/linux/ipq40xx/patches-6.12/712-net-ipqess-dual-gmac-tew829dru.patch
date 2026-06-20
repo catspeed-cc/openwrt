@@ -1,213 +1,62 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: OpenWrt Developer <openwrt@localhost>
-Date: Mon, 01 Jan 2024 00:00:00 +0000
-Subject: [PATCH] net: ipqess: add dual-GMAC support for TEW-829DRU
-
-The TRENDnet TEW-829DRU has two switches connected to the IPQ4019 ESS:
-  - GMAC0 -> QCA8075 (5-port switch, ports 0-4)
-  - GMAC1 -> QCA8337 (7-port switch, port 5 in RRD)
-
-Both GMACs share the single EDMA hardware block. This patch adds an
-optional second net_device (netdev2) that is created when the DT node
-contains the property "qcom,gmac1-port". Incoming packets are demuxed
-in ipqess_rx_poll() using the RRD port-id field; outgoing packets from
-either netdev share the same TX rings.
-
-The second interface's MAC address is read from a DT node referenced by
-"qcom,gmac1-netdev", or derived automatically from the primary MAC by
-eth_hw_addr_gen() if that phandle is absent.
-
-Signed-off-by: OpenWrt Developer <openwrt@localhost>
----
- .../net/ethernet/qualcomm/ipqess/ipqess.c     | 97 +++++++++++++++++--
- .../net/ethernet/qualcomm/ipqess/ipqess.h     |  5 +
- 2 files changed, 96 insertions(+), 6 deletions(-)
-
+diff --git a/drivers/net/ethernet/qualcomm/ipqess/ipqess.h b/drivers/net/ethernet/qualcomm/ipqess/ipqess.h
 --- a/drivers/net/ethernet/qualcomm/ipqess/ipqess.h
 +++ b/drivers/net/ethernet/qualcomm/ipqess/ipqess.h
-@@ -238,6 +238,9 @@ struct ipqess {
- 	struct net_device		*netdev;
- 	struct platform_device		*pdev;
+@@ -162,7 +162,8 @@ struct ipqess_rx_ring {
+ struct ipqess {
+-	struct net_device *netdev;
++	struct net_device *netdev;
++	int gmac_id;
+ 	void __iomem *hw_addr;
  
-+	/* second netdev for dual-GMAC (e.g. TEW-829DRU QCA8337 switch) */
-+	struct net_device		*netdev2;
-+
- 	struct ipqess_rx_ring		rx_ring[IPQESS_NETDEV_QUEUES];
- 	struct ipqess_tx_ring		tx_ring[IPQESS_NETDEV_QUEUES];
- 	struct ipqess_rx_ring_refill	rx_refill[IPQESS_NETDEV_QUEUES];
-@@ -259,6 +262,8 @@ struct ipqess {
- 	struct notifier_block		netdev_notifier;
- 	int				dsa_ports;
- 
-+	int				gmac1_port;  /* RRD port-id of GMAC1 (0 = disabled) */
-+
- 	struct ipqess_statistics	ipqess_stats;
- 	spinlock_t			stats_lock;
- 	struct net_device_stats		stats;
+ 	struct clk *ess_clk;
+diff --git a/drivers/net/ethernet/qualcomm/ipqess/ipqess.c b/drivers/net/ethernet/qualcomm/ipqess/ipqess.c
 --- a/drivers/net/ethernet/qualcomm/ipqess/ipqess.c
 +++ b/drivers/net/ethernet/qualcomm/ipqess/ipqess.c
-@@ -28,6 +28,8 @@
- #include "ipqess.h"
+@@ -101,7 +101,7 @@ static int ipqess_tx_ring_alloc(struct ipqess *ess)
+ 		tx_ring->ess = ess;
+ 		tx_ring->ring_id = i;
+ 		tx_ring->idx = i * 4;
+ 		tx_ring->count = IPQESS_TX_RING_SIZE;
+-		tx_ring->nq = netdev_get_tx_queue(ess->netdev, i);
++		tx_ring->nq = netdev_get_tx_queue(ess->netdev[ess->gmac_id], i);
  
-+#define IPQESS_GMAC1_PORT_DEFAULT	5
-+
- #define IPQESS_RRD_SIZE		16
- #define IPQESS_NEXT_IDX(X, Y)  (((X) + 1) & ((Y) - 1))
- #define IPQESS_TX_DMA_BUF_LEN	0x3fff
-@@ -155,7 +157,9 @@ static int ipqess_rx_buf_alloc(struct ipqess_rx_ring *rx_ring)
- {
- 	struct ipqess_buf *buf = &rx_ring->buf[rx_ring->head];
- 
--	buf->skb = netdev_alloc_skb_ip_align(rx_ring->ess->netdev,
-+	buf->skb = netdev_alloc_skb_ip_align(rx_ring->ess->netdev2 ?
-+					     rx_ring->ess->netdev2 :
-+					     rx_ring->ess->netdev,
- 					     IPQESS_RX_HEAD_BUFF_SIZE);
- 
- 	if (!buf->skb)
-@@ -236,6 +240,7 @@ static int ipqess_rx_poll(struct ipqess_rx_ring *rx_ring, int budget)
- 	while (done < budget) {
- 		struct dsa_oob_tag_info *tag_info;
- 		struct ipqess_rx_desc *rd;
-+		struct net_device *rx_netdev;
- 		struct sk_buff *skb;
- 
- 		if (rx_ring_tail == tail)
-@@ -281,8 +286,22 @@ static int ipqess_rx_poll(struct ipqess_rx_ring *rx_ring, int budget)
- 		}
- 
--		skb->dev = rx_ring->ess->netdev;
--		skb->protocol = eth_type_trans(skb, rx_ring->ess->netdev);
-+		/* Demux RX to netdev2 if this packet arrived on the GMAC1
-+		 * port (QCA8337 side on dual-switch boards like TEW-829DRU).
-+		 * The RRD port-id field lives in rrd1 bits [14:12].
-+		 */
-+		if (rx_ring->ess->netdev2 && rx_ring->ess->gmac1_port &&
-+		    (FIELD_GET(IPQESS_RRD_PORT_ID_MASK,
-+			       le16_to_cpu(rd->rrd1)) ==
-+		     rx_ring->ess->gmac1_port)) {
-+			rx_netdev = rx_ring->ess->netdev2;
-+		} else {
-+			rx_netdev = rx_ring->ess->netdev;
-+		}
-+
-+		skb->dev = rx_netdev;
-+		skb->protocol = eth_type_trans(skb, rx_netdev);
- 		skb_record_rx_queue(skb, rx_ring->ring_id);
- 
- 		if (rd->rrd6 & cpu_to_le16(IPQESS_RRD_CSUM_FAIL_MASK))
-@@ -303,8 +322,8 @@ static int ipqess_rx_poll(struct ipqess_rx_ring *rx_ring, int budget)
- 		napi_gro_receive(&rx_ring->napi_rx, skb);
- 
--		rx_ring->ess->stats.rx_packets++;
--		rx_ring->ess->stats.rx_bytes += length;
-+		rx_netdev->stats.rx_packets++;
-+		rx_netdev->stats.rx_bytes += length;
- 
- 		done++;
- skip:
-@@ -479,6 +498,23 @@ static int ipqess_netdevice_event(struct notifier_block *nb,
+ 		size = sizeof(struct ipqess_buf) * IPQESS_TX_RING_SIZE;
+ 		tx_ring->buf = devm_kzalloc(dev, size, GFP_KERNEL);
+@@ -474,7 +474,7 @@ static void ipqess_tx_complete(struct ipqess_tx_ring *tx_ring)
+ 	if (netif_tx_queue_stopped(tx_ring->nq)) {
+-		netdev_dbg(tx_ring->ess->netdev, "waking up tx queue %d\n",
++		netdev_dbg(tx_ring->ess->netdev[tx_ring->ess->gmac_id], "waking up tx queue %d\n",
+ 			   tx_ring->idx);
+ 		netif_tx_wake_queue(tx_ring->nq);
+ 	}
+@@ -968,7 +968,10 @@ static int ipqess_netdevice_event(struct notifier_block *nb,
  	struct ipqess *ess = container_of(nb, struct ipqess, netdev_notifier);
  	struct net_device *dev = netdev_notifier_info_to_dev(ptr);
  	struct netdev_notifier_changeupper_info *info;
-+	struct net_device *tracked;
-+
-+	/* Track DSA upper devices on both netdev and netdev2 */
-+	tracked = dev;
-+	if (tracked != ess->netdev &&
-+	    !(ess->netdev2 && tracked == ess->netdev2))
-+		return NOTIFY_DONE;
++	int i;
  
 -	if (dev != ess->netdev)
--		return NOTIFY_DONE;
-+	if (tracked != ess->netdev && !(ess->netdev2 && tracked == ess->netdev2))
-+		return NOTIFY_DONE;
++	for (i = 0; i < 2; i++)
++		if (dev == ess->netdev[i])
++			break;
++	if (i == 2)
+ 		return NOTIFY_DONE;
  
  	switch (event) {
- 	case NETDEV_CHANGEUPPER:
-@@ -648,6 +684,8 @@ static int ipqess_axi_probe(struct platform_device *pdev)
- 	struct device_node *np = pdev->dev.of_node;
- 	struct net_device *netdev;
- 	phy_interface_t phy_mode;
-+	struct net_device *netdev2 = NULL;
-+	struct device_node *np2;
- 	struct ipqess *ess;
- 	int i, err = 0;
- 
-@@ -737,6 +775,57 @@ static int ipqess_axi_probe(struct platform_device *pdev)
- 	if (err)
- 		goto err_notifier_unregister;
- 
-+	/* ------------------------------------------------------------------ *
-+	 * Optional second netdev for dual-GMAC boards (e.g. TEW-829DRU).     *
-+	 * Activated by DT property "qcom,gmac1-port" on the ESS node.        *
-+	 * That u32 value is the RRD port-id that identifies packets arriving  *
-+	 * from GMAC1 (the QCA8337 switch).  A phandle "qcom,gmac1-netdev"    *
-+	 * may point to a DT node carrying the MAC address; if absent the      *
-+	 * address is derived from the primary interface via eth_hw_addr_gen.  *
-+	 * ------------------------------------------------------------------ */
-+	if (!of_property_read_u32(np, "qcom,gmac1-port", &ess->gmac1_port)) {
-+		dev_info(&pdev->dev,
-+			 "dual-GMAC mode: GMAC1 RRD port-id = %u\n",
-+			 ess->gmac1_port);
-+
-+		netdev2 = devm_alloc_etherdev_mqs(&pdev->dev, 0,
-+						  IPQESS_NETDEV_QUEUES,
-+						  IPQESS_NETDEV_QUEUES);
-+		if (!netdev2) {
-+			err = -ENOMEM;
-+			goto err_notifier_unregister;
-+		}
-+
-+		/* Both netdevs share the same HW TX rings via ipqess_xmit */
-+		netdev2->netdev_ops   = &ipqess_axi_netdev_ops;
-+		netdev2->features     = netdev->features;
-+		netdev2->hw_features  = 0;
-+		netdev2->vlan_features = netdev->vlan_features;
-+		netdev2->watchdog_timeo = netdev->watchdog_timeo;
-+		netdev2->base_addr    = netdev->base_addr;
-+		netdev2->max_mtu      = netdev->max_mtu;
-+		netdev2->gso_max_segs = netdev->gso_max_segs;
-+		SET_NETDEV_DEV(netdev2, &pdev->dev);
-+
-+		/* MAC address: prefer explicit DT node, else auto-derive */
-+		np2 = of_parse_phandle(np, "qcom,gmac1-netdev", 0);
-+		if (np2) {
-+			if (of_get_ethdev_address(np2, netdev2)) {
-+				eth_hw_addr_random(netdev2);
-+				dev_info(&pdev->dev,
-+					 "gmac1: using random MAC %pM\n",
-+					 netdev2->dev_addr);
-+			}
-+			of_node_put(np2);
-+		} else {
-+			eth_hw_addr_gen(netdev2, netdev->dev_addr, 1);
-+		}
-+
-+		ipqess_set_ethtool_ops(netdev2);
-+		ess->netdev2 = netdev2;
-+
-+		err = register_netdev(netdev2);
-+		if (err) {
-+			dev_err(&pdev->dev,
-+				"failed to register gmac1 netdev: %d\n", err);
-+			ess->netdev2 = NULL;
-+			/* non-fatal: primary interface still works */
-+		}
-+	}
-+
- 	dev_set_threaded(netdev, true);
- 
- 	return 0;
-@@ -801,6 +840,11 @@ static void ipqess_axi_remove(struct platform_device *pdev)
+@@ -1180,8 +1180,9 @@ static int ipqess_axi_probe(struct platform_device *pdev)
+ 	ess = netdev_priv(netdev);
+-	ess->netdev = netdev;
++	ess->netdev = netdev;
++	ess->gmac_id = 0;
+ 	ess->pdev = pdev;
+ 	spin_lock_init(&ess->stats_lock);
+ 	SET_NETDEV_DEV(netdev, &pdev->dev);
+@@ -1301,7 +1301,7 @@ static void ipqess_axi_remove(struct platform_device *pdev)
  	const struct net_device *netdev = platform_get_drvdata(pdev);
  	struct ipqess *ess = netdev_priv(netdev);
  
-+	if (ess->netdev2) {
-+		unregister_netdev(ess->netdev2);
-+		ess->netdev2 = NULL;
-+	}
-+
- 	unregister_netdev(ess->netdev);
+-	unregister_netdev(ess->netdev);
++	unregister_netdev(ess->netdev[ess->gmac_id]);
  	ipqess_hw_stop(ess);
  
+ 	ipqess_tx_ring_free(ess);
