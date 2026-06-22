@@ -401,17 +401,19 @@
 
 &tlmm {
 
-	nand_pins {
-		nand-state {
-			/* gpio53 removed — it's QPIC_DATA11 (16-bit only).
-			 * gpio53 is claimed by MDIO (MDI line). 8-bit NAND
-			 * does not need it. Removing resolves EINVAL conflict. */
-			pins = "gpio55", "gpio56", "gpio57", "gpio58",
-				   "gpio59", "gpio60", "gpio62", "gpio63", "gpio64",
-				   "gpio65", "gpio66", "gpio67", "gpio68", "gpio69";
-			function = "qpic";
-			bias-disable;
-		};
+
+	/delete-node/ nand_pins; /* nuke the parent DTSI's nand_pins */
+
+	nand_pins: nand-state {
+		/* Verbatim from spi-extracted.dts nand-state.
+		 * gpio53 removed — conflicts with mdio_pinmux (MDIO/gpio53).
+		 * gpio52 was never in mfr nand-state (MDC only, MDIO-owned).
+		 * No bias — matches manufacturer and upstream OpenWrt style. */
+		pins = "gpio55", "gpio56", "gpio57", "gpio58",
+			   "gpio59", "gpio60", "gpio62", "gpio63",
+			   "gpio64", "gpio65", "gpio66", "gpio67",
+			   "gpio68", "gpio69";
+		function = "qpic";
 	};
 
 	/* Add this GPIO Hog for USB Power */
