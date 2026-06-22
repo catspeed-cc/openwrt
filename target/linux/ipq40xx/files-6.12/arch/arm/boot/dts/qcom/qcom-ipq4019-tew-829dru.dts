@@ -345,9 +345,10 @@
 
 /* start of &nand (Micron MT29F1G08ABADA NAND 128MB) */
 &nand {
-	status = "okay";    /* DISABLED WHILE FIGURING OUT SWITCH CONFIG */
+	status = "okay";
 
-	/* REMOVED PINCTRL - NO CONFLICT PLS */
+	pinctrl-0 = <&nand_pins>;
+    pinctrl-names = "default";
 
 	nand@0 {
 		reg = <0>;
@@ -402,7 +403,10 @@
 
 	nand_pins {
 		nand-state {
-			pins = "gpio53", "gpio55", "gpio56", "gpio57", "gpio58",
+			/* gpio53 removed — it's QPIC_DATA11 (16-bit only).
+			 * gpio53 is claimed by MDIO (MDI line). 8-bit NAND
+			 * does not need it. Removing resolves EINVAL conflict. */
+			pins = "gpio55", "gpio56", "gpio57", "gpio58",
 				   "gpio59", "gpio60", "gpio62", "gpio63", "gpio64",
 				   "gpio65", "gpio66", "gpio67", "gpio68", "gpio69";
 			function = "qpic";
