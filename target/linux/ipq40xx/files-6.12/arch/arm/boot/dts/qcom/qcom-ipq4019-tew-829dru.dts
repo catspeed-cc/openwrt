@@ -345,9 +345,7 @@
 
 /* start of &nand (Micron MT29F1G08ABADA NAND 128MB) */
 &nand {
-	status = "disabled";    /* DISABLED WHILE FIGURING OUT SWITCH CONFIG */
-	/delete-property/ pinctrl-0;
-	/delete-property/ pinctrl-names;
+	status = "okay";    /* DISABLED WHILE FIGURING OUT SWITCH CONFIG */
 
 	/* REMOVED PINCTRL - NO CONFLICT PLS */
 
@@ -606,11 +604,6 @@
 
 
 /*
-
- NAND TODO:
-	- FIX NAND - fucking nand is impossible, memory address conflicts with qcom-ipq4019.dtsi
-	- DO NOT MIX SPI/NAND PARTITIONS!
-	- NAND IS DIFFERENT GPIOS, GPIO53 IS IN USE - FIND CORRECT NAND GPIO
 
  LED TODO:
 	- Probe GPIOs
