@@ -47,8 +47,7 @@
 		mtd6 = &appsbl_part;
 		mtd7 = &art_part;
 		mtd8 = &rootfs_part;
-		mtd9 = &rootfs_1_part;
-		mtd10 = &overlay_part;
+		mtd9 = &overlay_part;
 	};
 }; /* end of root block */
 
