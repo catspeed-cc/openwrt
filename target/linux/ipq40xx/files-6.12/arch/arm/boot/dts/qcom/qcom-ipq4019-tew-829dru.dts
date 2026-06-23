@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 // Copyright (c) 2018, The Linux Foundation. All rights reserved.
-// Copyright (c) 2026, Your Name <your@email.com>
+// Copyright (c) 2026, mooleshacat <mooleshacat@catspeed.cc>
 
 /*
  *		What is working?
@@ -21,6 +21,8 @@
  *			- proper install/sysupgrade integration
  *
  *	WARNING: ENSURE BOARD.BIN AND CALDATA IS NOT COMMITTED TO GIT REPOSITORY (INTELLECTUAL PROPERTY CONCERNS)
+ *
+ *	NOTICE: THIS DTS DESCRIBES THE OPTIMAL CONFIGURATION FOR MAXIMUM HARDWARE FREEDOM :3
  *
  */
 
@@ -47,7 +49,6 @@
 		mtd6 = &appsbl_part;
 		mtd7 = &art_part;
 		mtd8 = &rootfs_part;
-		mtd9 = &overlay_part;
 	};
 }; /* end of root block */
 
@@ -350,8 +351,11 @@
 &nand {
 	status = "okay";
 
-	pinctrl-0 = <&nand_pins>;
-    pinctrl-names = "default";
+	/* pinctrl removed — gpio53 owned by mdio permanently.
+	 * NAND uses remaining QPIC pins (gpio55-69 minus gpio61).
+	 * gpio53 shared at hardware level, mdio claims it exclusively. */
+	 /delete-property/ pinctrl-0;
+	 /delete-property/ pinctrl-names;
 
 	nand@0 {
 		reg = <0>;
@@ -359,24 +363,23 @@
 		nand-ecc-strength = <4>;
 		nand-ecc-step-size = <512>;
 		nand-bus-width = <8>;
+		
+		/* nand-is-boot-medium REMOVED — not in spi-extracted.dts,
+		* boot is on SPI NOR (SBL1), not NAND. Causes BBM read errors. */
 
+		/* NOTICE:	THIS DIVERGES FROM MFR SPI-EXTRACTED.DTS */
+		/*			rootfs_1 & overlay has been merged into rootfs. */
+		/*			sysupgrade manages kernel, rootfs, and rootfs_data */
+		/*			internally — no separate overlay partition needed. */
+		/*			Use firstboot to reset overlay, sysupgrade for clean install. */
 		partitions {
 			compatible = "fixed-partitions";
 			#address-cells = <1>;
 			#size-cells = <1>;
 
-			/* NOTICE:	THIS DIVERGES FROM MFR SPI-EXTRACTED.DTS */
-			/*			We are going to take the rootfs_1 out and */
-			/*			use it as overlay space for packages */
-			/*			MAXIMUM FREEDOM FOR ALL USERS :3 */
 			rootfs_part: partition@0 {
 				label = "rootfs";
-				reg = <0x00000000 0x03000000>; /* 48MB */
-			};
-
-			overlay_part: partition@3000000 {
-				label = "overlay";
-				reg = <0x03000000 0x05000000>; /* 80MB */
+				reg = <0x00000000 0x08000000>; /* 128MB (merged rootfs + overlay) */
 			};
 		};
 	};
@@ -403,29 +406,31 @@
 
 &tlmm {
 
-
 	/delete-node/ nand_pins; /* nuke the parent DTSI's nand_pins */
 
+	/* Verbatim from spi-extracted.dts nand-state.
+	 * gpio53 included — required for QPIC bus data transfer.
+	 * gpio52 excluded — MDC only, permanently owned by mdio_pins.
+	 * pinctrl-0 removed from &nand node so NAND driver does not
+	 * claim gpio53 at probe time, avoiding conflict with mdio.
+	 * MDIO owns gpio53 exclusively via pinctrl, NAND uses it
+	 * at the hardware level without the kernel pinctrl layer
+	 * fighting over it. No bias — matches manufacturer style. */
 	nand_pins: nand-state {
-		/* Verbatim from spi-extracted.dts nand-state.
-		 * gpio53 removed — conflicts with mdio_pinmux (MDIO/gpio53).
-		 * gpio52 was never in mfr nand-state (MDC only, MDIO-owned).
-		 * No bias — matches manufacturer and upstream OpenWrt style. */
-		pins = "gpio55", "gpio56", "gpio57", "gpio58",
+		pins = "gpio53", "gpio55", "gpio56", "gpio57", "gpio58",
 			   "gpio59", "gpio60", "gpio62", "gpio63",
 			   "gpio64", "gpio65", "gpio66", "gpio67",
 			   "gpio68", "gpio69";
 		function = "qpic";
 	};
-
-	/* Add this GPIO Hog for USB Power */
+	
+	/* Add GPIO Hog for USB Power */
 	usb_power_en: usb-power-en {
 		gpio-hog;
 		gpios = <48 GPIO_ACTIVE_HIGH>;
 		output-high;
 		line-name = "usb-power-enable";
 	};
-	
 
 	mdio_pins: mdio_pinmux {
 		pinmux_1 {
