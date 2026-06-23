@@ -36,6 +36,8 @@
 	};
 	
 	aliases {
+		ethernet0 = &gmac;
+		ethernet1 = &gmac2;
 		mtd0 = &sbl1_part;
 		mtd1 = &mibib_part;
 		mtd2 = &qsee_part;
