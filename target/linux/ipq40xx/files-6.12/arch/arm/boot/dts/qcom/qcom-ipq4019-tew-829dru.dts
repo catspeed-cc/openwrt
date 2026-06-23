@@ -366,19 +366,18 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 
+			/* NOTICE:	THIS DIVERGES FROM MFR SPI-EXTRACTED.DTS */
+			/*			We are going to take the rootfs_1 out and */
+			/*			use it as overlay space for packages */
+			/*			MAXIMUM FREEDOM FOR ALL USERS :3 */
 			rootfs_part: partition@0 {
 				label = "rootfs";
 				reg = <0x00000000 0x03000000>; /* 48MB */
 			};
 
-			rootfs_1_part: partition@3000000 {
-				label = "rootfs_1";
-				reg = <0x03000000 0x03000000>; /* 48MB */
-			};
-
-			overlay_part: partition@6000000 {
+			overlay_part: partition@3000000 {
 				label = "overlay";
-				reg = <0x06000000 0x02000000>; /* 32MB */
+				reg = <0x03000000 0x05000000>; /* 80MB */
 			};
 		};
 	};
