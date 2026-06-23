@@ -9,7 +9,7 @@
  *			- CPU
  *			- RAM
  *			- USB
- *			- 8MB Flash (Macronix MX25L6433F SPI NOR 8MB // dual bootloader, ART, etc.)
+ *			- 8MB Flash (Macronix MX25L6433F SPI NOR 8MB // single stock bootloader, ART, etc.)
  *			- 128MB nand (Micron MT29F1G08ABADA NAND 128MB // 2x kernel, 2x rootfs, 1x rootfs_data)
  *			- wifi (QCA9984, QCA4019)
  *			- switches (QCA8075, QCA8337)
