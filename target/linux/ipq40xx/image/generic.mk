@@ -1245,6 +1245,33 @@ endef
 # Missing DSA Setup
 #TARGET_DEVICES += tel_x1pro
 
+define Device/trendnet_tew-829dru
+	$(call Device/FitImage)
+	$(call Device/UbiFit)
+	DEVICE_VENDOR := TRENDnet
+	DEVICE_MODEL := TEW-829DRU
+	DEVICE_DTS := qcom-ipq4019-tew-829dru
+	DEVICE_DTS_CONFIG := config@1
+	KERNEL_INSTALL := 1
+	BLOCKSIZE := 128k
+	PAGESIZE := 2048
+	FILESYSTEMS := squashfs
+	DEVICE_PACKAGES := ipq-wifi-trendnet_tew-829dru \
+		ath10k-firmware-qca4019-ct \
+		ath10k-firmware-qca9984-ct \
+		kmod-ath10k-ct-smallbuffers \
+		kmod-dsa-qca8k \
+		kmod-mtd-rawnand \
+		kmod-phy-qca807x \
+		kmod-phy-qca83xx \
+		kmod-usb-dwc3 \
+		kmod-usb-dwc3-qcom \
+		mwan3 \
+		uboot-envtools
+	IMAGE_SIZE := 112640k
+endef
+TARGET_DEVICES += trendnet_tew-829dru
+
 define Device/unielec_u4019-32m
 	$(call Device/FitImage)
 	DEVICE_VENDOR := Unielec
@@ -1409,19 +1436,3 @@ endef
 # Missing DSA Setup
 #TARGET_DEVICES += zyxel_wre6606
 
-define Device/trendnet_tew-829dru
-  $(call Device/FitImage)
-  $(call Device/UbiFit)
-  DEVICE_VENDOR := TRENDnet
-  DEVICE_MODEL := TEW-829DRU
-  DEVICE_DTS := qcom-ipq4019-tew-829dru
-  #DEVICE_DTS_DIR := ../dts
-  DEVICE_DTS_CONFIG := config@1
-  KERNEL_INSTALL := 1
-  BLOCKSIZE := 128k
-  PAGESIZE := 2048
-  FILESYSTEMS := squashfs
-  DEVICE_PACKAGES := ipq-wifi-trendnet_tew-829dru
-  IMAGE_SIZE := 112640k
-endef
-TARGET_DEVICES += trendnet_tew-829dru
