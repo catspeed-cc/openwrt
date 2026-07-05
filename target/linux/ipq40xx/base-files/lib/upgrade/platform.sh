@@ -238,7 +238,6 @@ platform_do_upgrade() {
 		;;
         trendnet,tew-829dru)
                 CI_UBIPART="rootfs"
-                CI_KERNPART="none"
                 nand_do_upgrade "$1"
                 ;;
 	zyxel,nbg6617)
