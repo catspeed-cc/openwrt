@@ -125,9 +125,6 @@ ipq40xx_setup_interfaces()
 	plasmacloud,pa2200)
 		ucidef_set_interfaces_lan_wan "ethernet1" "ethernet2"
 		;;
-        trendnet,tew-829dru)
-                ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4 lan5 lan6 lan7 lan8" "wan1 wan2"
-                ;;
 	qxwlan,e2600ac-c1)
 		ucidef_set_interfaces_lan_wan "sw-eth1" "sw-eth2"
 		;;
@@ -137,6 +134,9 @@ ipq40xx_setup_interfaces()
 	skspruce,wia3300-20)
 		ucidef_set_interfaces_lan_wan "ETH2" "ETH1"
 		;;
+        trendnet,tew-829dru)
+                ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4 lan5 lan6 lan7 lan8" "wan1 wan2"
+                ;;
 	zte,mf286d)
 		ucidef_set_interfaces_lan_wan "lan2 lan3 lan4" "wan"
 		;;

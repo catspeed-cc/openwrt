@@ -133,6 +133,12 @@ sony,ncp-hg100-cellular)
 	ucidef_set_led_netdev "wan" "WAN" "green:wan" "wan"
 	ucidef_set_led_netdev "wwan" "WWAN" "green:wan-4" "wwan0"
 	;;
+trendnet,tew829dru)
+        ucidef_set_led_wlan "wlan5g1" "WLAN5G1" "ath10k-phy0" "phy0tpt"
+        ucidef_set_led_wlan "wlan2g4" "WLAN2G4" "tew829dru:blue:2g4" "phy1tpt"
+        ucidef_set_led_wlan "wlan5g2" "WLAN5G2" "tew829dru:blue:5g2" "phy2tpt"
+        ucidef_set_led_default "wps" "WPS" "tew829dru:blue:wps" "0"
+        ;;
 zyxel,nbg6617|\
 zyxel,wre6606)
 	ucidef_set_led_wlan "wlan2g" "WLAN2G" "green:wlan2g" "phy0tpt"

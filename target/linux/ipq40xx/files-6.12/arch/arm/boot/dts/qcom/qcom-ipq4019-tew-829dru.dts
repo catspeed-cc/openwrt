@@ -4,7 +4,7 @@
 
 /*
  *		What is working?
- *
+ *			
  *			- UART
  *			- CPU
  *			- RAM
@@ -13,14 +13,12 @@
  *			- 128MB nand (Micron MT29F1G08ABADA NAND 128MB // 2x kernel, 2x rootfs, 1x rootfs_data)
  *			- wifi (QCA9984, QCA4019)
  *			- switches (QCA8075, QCA8337)
+ *			- LEDs (will resolve last :P)
  *
  *		What is NOT working?
- *
- *			- LEDs (will resolve last :P)
+ *			
  *			- possible reset button
  *			- proper install/sysupgrade integration
- *
- *	WARNING: ENSURE BOARD.BIN AND CALDATA IS NOT COMMITTED TO GIT REPOSITORY (INTELLECTUAL PROPERTY CONCERNS)
  *
  *	NOTICE: THIS DTS DESCRIBES THE OPTIMAL CONFIGURATION FOR MAXIMUM HARDWARE FREEDOM :3
  *
@@ -50,7 +48,67 @@
 		mtd7 = &art_part;
 		mtd8 = &rootfs_part;
 	};
+	
+	gpio-keys {
+		compatible = "gpio-keys";
+		
+		reset {
+			label = "reset";
+			gpios = <&tlmm 18 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_RESTART>;
+		};
+	};
+	
+	regulators {
+		compatible = "simple-bus";
+
+		usb_power: usb-power-enable {
+			compatible = "regulator-fixed";
+			regulator-name = "usb-power-enable";
+			gpio = <&tlmm 48 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+			regulator-always-on;
+			regulator-boot-on;
+		};
+	};
+	
+	leds {
+	
+		compatible = "gpio-leds";
+
+		led_2g4: led-2g4 {
+			label = "tew829dru:blue:2g4";
+			gpios = <&tlmm 49 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "phy0tpt";
+			default-state = "off";
+		};
+
+		/* MISSING - claimed by qca8k, dont need it */
+		/*led_5g1: led-5g1 {
+			label = "tew829dru:blue:5g1";
+			gpios = <&tlmm ??? GPIO_ACTIVE_LOW>; //temporary - FILL IN GPIO WHEN FOUND!
+			default-state = "off";
+		};*/
+		
+		led_5g2: led-5g2 {
+			label = "tew829dru:blue:5g2";
+			gpios = <&tlmm 45 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "phy1tpt";
+			default-state = "off";
+		};
+
+		led_wps: led-wps {
+			label = "tew829dru:blue:wps";
+			gpios = <&tlmm 50 GPIO_ACTIVE_LOW>;
+			default-state = "off";
+		};
+		
+	}; /* end of leds */
+	
 }; /* end of root block */
+
+
+
 
 /* ============================================================
  * EDMA — dual conduit netdev for side-by-side DSA.
@@ -75,6 +133,8 @@
 		/* intentionally empty */
 	};
 };
+
+
 
 
 /* ============================================================
@@ -152,6 +212,8 @@
 		 
 	};
 }; /* end of &switch */
+
+
 
 
 /* ============================================================
@@ -265,6 +327,9 @@
 	};
 }; /* end of &mdio */
 
+
+
+
 /* 8MB FLASH CHIP (Macronix MX25L6433F SPI NOR 8MB) */
 &blsp1_spi1 {
 
@@ -340,6 +405,9 @@
 	};
 };
 /* end of &blsp1_spi1 (Macronix MX25L6433F SPI NOR 8MB) */
+
+
+
 
 /* start of &qpic_bam (for Micron MT29F1G08ABADA NAND 128MB) */
 &qpic_bam {
@@ -424,14 +492,6 @@
 		function = "qpic";
 	};
 	
-	/* Add GPIO Hog for USB Power */
-	usb_power_en: usb-power-en {
-		gpio-hog;
-		gpios = <48 GPIO_ACTIVE_HIGH>;
-		output-high;
-		line-name = "usb-power-enable";
-	};
-
 	mdio_pins: mdio_pinmux {
 		pinmux_1 {
 			pins = "gpio53";
@@ -463,20 +523,6 @@
 		bias-disable;
 	};
 
-	led0_pins: led0_pinmux {
-		mux_1 {
-			pins = "gpio36";
-			function = "led0";
-			bias-pull-down;
-		};
-
-		mux_2 {
-			pins = "gpio40";
-			function = "led4";
-			bias-pull-down;
-		};
-	};
-
 	uart1_pins: uart1_pinmux {
 		mux {
 			pins = "gpio8", "gpio9", "gpio10", "gpio11";
@@ -493,6 +539,7 @@
 		};
 	};
 
+	/* needed for ath10k / PCIe WiFi */
 	i2c_0_pinmux: i2c_0_pinmux {
 		mux {
 			pins = "gpio20", "gpio21";
@@ -549,8 +596,6 @@
 
 
 
-
-
 /* QCA4019 2GHZ */
 &wifi0 {
 	status = "okay";
@@ -580,6 +625,7 @@
 		ranges;
 
 		wifi@0,0 {
+			status = "okay";
 			compatible = "qcom,ath10k";
 			reg = <0x00010000 0 0 0 0>;
 			nvmem-cells = <&caldata_art_9000>;
@@ -587,6 +633,9 @@
 		};
 	};
 };
+
+
+
 
 /* ART data / caldata for wifi */
 &art_part {
@@ -613,43 +662,3 @@
 		reg = <0x9000 0x2f20>;
 	};
 };
-
-
-
-/*
-
- LED TODO:
-	- Probe GPIOs
-	- Add DTS config for LEDs
-
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
