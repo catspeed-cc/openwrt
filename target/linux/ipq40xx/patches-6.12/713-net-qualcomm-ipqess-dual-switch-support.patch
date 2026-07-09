@@ -59,29 +59,6 @@ Signed-off-by: mooleshacat <mooleshacat@catspeed.cc>
  
  	spin_lock(&ess->stats_lock);
  	ipqess_update_hw_stats(ess);
-@@ -393,8 +407,20 @@ static int ipqess_rx_poll(struct ipqess_
- 			skb_put(skb, length);
- 		}
- 
--		skb->dev = rx_ring->ess->netdev;
--		skb->protocol = eth_type_trans(skb, rx_ring->ess->netdev);
-+		{
-+			struct net_device *rxdev;
-+			u16 port_id = (le16_to_cpu(rd->rrd1) >> IPQESS_RRD_PORT_TYPE_SHIFT)
-+						  & IPQESS_RRD_PORT_TYPE_MASK;
-+
-+			if (rx_ring->ess->netdev2 &&
-+				port_id == IPQESS_ESS_PORT_QCA8337)
-+				rxdev = rx_ring->ess->netdev2;
-+			else
-+				rxdev = rx_ring->ess->netdev;
-+
-+			skb->dev = rxdev;
-+			skb->protocol = eth_type_trans(skb, rxdev);
-+		}
- 		skb_record_rx_queue(skb, rx_ring->ring_id);
- 
- 		if (rd->rrd6 & cpu_to_le16(IPQESS_RRD_CSUM_FAIL_MASK))
 @@ -584,24 +610,40 @@ static void ipqess_irq_disable(struct ip
  
  static int ipqess_init(struct net_device *netdev)
@@ -217,7 +194,7 @@ Signed-off-by: mooleshacat <mooleshacat@catspeed.cc>
  static void ipqess_hw_stop(struct ipqess *ess)
  {
  	int i;
-@@ -1279,8 +1358,61 @@ static int ipqess_axi_probe(struct platf
+@@ -1279,8 +1358,70 @@ static int ipqess_axi_probe(struct platf
  
  	dev_set_threaded(netdev, true);
  
@@ -247,7 +224,17 @@ Signed-off-by: mooleshacat <mooleshacat@catspeed.cc>
 +		/* Set of_node to gmac2 child so DSA can resolve 'ethernet = <&gmac2>' */
 +		netdev2->dev.of_node = of_get_child_by_name(np, "gmac2");
 +
-+		netdev2->netdev_ops = &ipqess_axi_netdev_ops;
++		/* Block TX on netdev2 - all TX goes through primary netdev */
++		netdev2->netdev_ops = &(struct net_device_ops){
++			.ndo_init = ipqess_init,
++			.ndo_uninit = ipqess_uninit,
++			.ndo_open = ipqess_open,
++			.ndo_stop = ipqess_stop,
++			.ndo_eth_ioctl = ipqess_do_ioctl,
++			.ndo_get_stats = ipqess_get_stats,
++			.ndo_set_mac_address = ipqess_set_mac_address,
++			/* NO ndo_start_xmit - RX only! */
++		};
 +		netdev2->features   = netdev->features;
 +		netdev2->hw_features = 0;
 +		netdev2->vlan_features = netdev->vlan_features;
@@ -279,7 +266,7 @@ Signed-off-by: mooleshacat <mooleshacat@catspeed.cc>
  err_notifier_unregister:
  	unregister_netdevice_notifier(&ess->netdev_notifier);
  err_hw_stop:
-@@ -1299,9 +1431,15 @@ err_clk:
+@@ -1299,9 +1440,15 @@ err_clk:
  
  static void ipqess_axi_remove(struct platform_device *pdev)
  {
@@ -296,7 +283,7 @@ Signed-off-by: mooleshacat <mooleshacat@catspeed.cc>
  	unregister_netdev(ess->netdev);
  	ipqess_hw_stop(ess);
  
-@@ -1334,4 +1472,5 @@ MODULE_AUTHOR("John Crispin <john@phroze
+@@ -1334,4 +1481,5 @@ MODULE_AUTHOR("John Crispin <john@phroze
  MODULE_AUTHOR("Christian Lamparter <chunkeey@gmail.com>");
  MODULE_AUTHOR("Gabor Juhos <j4g8y7@gmail.com>");
  MODULE_AUTHOR("Maxime Chevallier <maxime.chevallier@bootlin.com>");
